@@ -41,7 +41,10 @@ export default async function DiscoverPage() {
     followingSet = new Set((follows ?? []).map((f) => f.following_id));
   }
 
-  const list = (readers ?? []) as ReaderRow[];
+  // Supabase's untyped client infers embedded books as an array, but the
+  // currently_reading FK is many-to-one, so at runtime it's a single object or
+  // null. Bridge the inferred type to our runtime-accurate ReaderRow shape.
+  const list = (readers ?? []) as unknown as ReaderRow[];
 
   return (
     <div className="space-y-6">

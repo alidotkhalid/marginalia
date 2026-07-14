@@ -57,7 +57,9 @@ export default async function ProfilePage({
       .limit(50),
   ]);
 
-  const currentBook = profile.books as
+  // See note in discover/page.tsx: embedded to-one relation is a single object
+  // (or null) at runtime, though the untyped client infers an array.
+  const currentBook = profile.books as unknown as
     | { title: string; author: string | null; cover_id: number | null }
     | null;
   const feed = (posts ?? []) as FeedPost[];
