@@ -1,0 +1,62 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* A faint paper grain via a repeating linear tint keeps it warm, not flat */
+    background-color: theme("colors.parchment.DEFAULT");
+  }
+  body {
+    @apply bg-parchment text-ink font-serif antialiased;
+    font-size: 1.075rem;
+    line-height: 1.7;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display text-ink;
+    letter-spacing: -0.01em;
+  }
+  a {
+    @apply text-forest underline-offset-2 transition-colors;
+  }
+  a:hover {
+    @apply text-forest-dark underline;
+  }
+  /* Selection color: aged brass */
+  ::selection {
+    background-color: theme("colors.brass");
+    color: theme("colors.parchment.light");
+  }
+}
+
+@layer components {
+  /* An index-card style surface used for posts, profile blocks, etc. */
+  .card {
+    @apply bg-parchment-light border border-parchment-dark rounded-card shadow-card;
+  }
+  /* A thin brass rule used as a section divider */
+  .rule {
+    @apply border-0 border-t border-brass/40;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-card font-serif
+           border transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-forest text-parchment-light border-forest hover:bg-forest-dark no-underline;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink border-parchment-dark hover:bg-parchment-dark no-underline;
+  }
+  .input {
+    @apply w-full bg-parchment-light border border-parchment-dark rounded-card px-3 py-2
+           text-ink placeholder:text-ink-faint focus:outline-none focus:border-forest;
+  }
+  /* "Currently reading" tag */
+  .tag-reading {
+    @apply inline-flex items-center gap-1 text-xs font-mono uppercase tracking-wider
+           text-oxblood border border-oxblood/40 rounded-card px-2 py-0.5;
+  }
+}

@@ -1,0 +1,187 @@
+-- ============================================================================
+-- Marginalia — Database schema for Supabase (PostgreSQL)
+-- Run this in the Supabase SQL Editor (Dashboard → SQL Editor → New query).
+-- It is idempotent-ish: safe to read top-to-bottom on a fresh project.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. PROFILES
+-- Supabase already manages auth in the private `auth.users` table. We mirror
+-- public, shareable fields here, keyed 1:1 to the auth user via `id`.
+-- ----------------------------------------------------------------------------
+create table if not exists public.profiles (
+  id                  uuid primary key references auth.users (id) on delete cascade,
+  username            text unique not null
+                        check (char_length(username) between 3 and 24
+                               and username ~ '^[a-z0-9_]+$'),
+  display_name        text check (char_length(display_name) <= 60),
+  bio                 text check (char_length(bio) <= 280),
+  -- The book the user is currently reading (nullable). Cover art is derived
+  -- from the Open Library key at render time — we never store images.
+  -- NOTE: the FK to books is added via ALTER below, since books is defined next.
+  currently_reading   uuid,
+  created_at          timestamptz not null default now()
+);
+
+-- ----------------------------------------------------------------------------
+-- 2. BOOKS
+-- A local cache of Open Library metadata. We de-duplicate on `olid` (the
+-- Open Library work/edition key, e.g. "OL45804W"). No image bytes are stored;
+-- only `cover_id` is kept so the client can build a covers.openlibrary.org URL.
+-- ----------------------------------------------------------------------------
+create table if not exists public.books (
+  id           uuid primary key default gen_random_uuid(),
+  olid         text unique not null,          -- Open Library key
+  title        text not null,
+  author       text,
+  cover_id     bigint,                        -- Open Library cover_i (nullable)
+  first_year   int,
+  created_at   timestamptz not null default now()
+);
+
+-- Now that books exists, wire up the profiles.currently_reading foreign key.
+alter table public.profiles
+  drop constraint if exists profiles_currently_reading_fkey;
+alter table public.profiles
+  add constraint profiles_currently_reading_fkey
+  foreign key (currently_reading) references public.books (id) on delete set null;
+
+-- ----------------------------------------------------------------------------
+-- 3. POSTS
+-- Short, text-first "reading notes". Tied to a book. Character-limited at the
+-- database level (defense in depth) to enforce concise, thoughtful writing.
+-- ----------------------------------------------------------------------------
+create table if not exists public.posts (
+  id           uuid primary key default gen_random_uuid(),
+  author_id    uuid not null references public.profiles (id) on delete cascade,
+  book_id      uuid references public.books (id) on delete set null,
+  body         text not null check (char_length(body) between 1 and 500),
+  -- Optional label so the feed can distinguish a quote from a thought/review.
+  kind         text not null default 'note'
+                 check (kind in ('note', 'quote', 'review')),
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists posts_author_created_idx
+  on public.posts (author_id, created_at desc);
+create index if not exists posts_created_idx
+  on public.posts (created_at desc);
+
+-- ----------------------------------------------------------------------------
+-- 4. FOLLOWS
+-- Directed edges: `follower_id` follows `following_id`.
+-- ----------------------------------------------------------------------------
+create table if not exists public.follows (
+  follower_id   uuid not null references public.profiles (id) on delete cascade,
+  following_id  uuid not null references public.profiles (id) on delete cascade,
+  created_at    timestamptz not null default now(),
+  primary key (follower_id, following_id),
+  check (follower_id <> following_id)         -- cannot follow yourself
+);
+
+create index if not exists follows_following_idx
+  on public.follows (following_id);
+
+-- ============================================================================
+-- ROW LEVEL SECURITY
+-- Everything is locked down by default; policies grant the minimum needed.
+-- ============================================================================
+alter table public.profiles enable row level security;
+alter table public.books    enable row level security;
+alter table public.posts    enable row level security;
+alter table public.follows  enable row level security;
+
+-- PROFILES ------------------------------------------------------------------
+-- Profiles are public (needed to render feeds & profile pages).
+create policy "profiles are viewable by everyone"
+  on public.profiles for select using (true);
+
+create policy "users can insert their own profile"
+  on public.profiles for insert with check (auth.uid() = id);
+
+create policy "users can update their own profile"
+  on public.profiles for update using (auth.uid() = id);
+
+-- BOOKS ---------------------------------------------------------------------
+-- Book metadata is public; any authenticated user may cache a new book.
+create policy "books are viewable by everyone"
+  on public.books for select using (true);
+
+create policy "authenticated users can add books"
+  on public.books for insert to authenticated with check (true);
+
+-- POSTS ---------------------------------------------------------------------
+-- Posts are public to read; you may only write/edit/delete your own.
+create policy "posts are viewable by everyone"
+  on public.posts for select using (true);
+
+create policy "users can create their own posts"
+  on public.posts for insert to authenticated
+  with check (auth.uid() = author_id);
+
+create policy "users can delete their own posts"
+  on public.posts for delete using (auth.uid() = author_id);
+
+-- FOLLOWS -------------------------------------------------------------------
+create policy "follows are viewable by everyone"
+  on public.follows for select using (true);
+
+create policy "users can follow on their own behalf"
+  on public.follows for insert to authenticated
+  with check (auth.uid() = follower_id);
+
+create policy "users can unfollow on their own behalf"
+  on public.follows for delete using (auth.uid() = follower_id);
+
+-- ============================================================================
+-- TRIGGER: auto-create a profile row when a new auth user signs up.
+-- The username is passed through auth `raw_user_meta_data.username` at signup.
+-- ============================================================================
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, username, display_name)
+  values (
+    new.id,
+    coalesce(
+      new.raw_user_meta_data ->> 'username',
+      -- Fallback: derive a safe handle from the email local-part.
+      lower(regexp_replace(split_part(new.email, '@', 1), '[^a-z0-9_]', '', 'g'))
+    ),
+    new.raw_user_meta_data ->> 'display_name'
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- ============================================================================
+-- CONVENIENCE VIEW: the chronological feed for a given viewer.
+-- Returns posts authored by people the viewer follows, plus their own posts,
+-- newest first, with author + book fields joined in.
+-- ============================================================================
+create or replace view public.feed_posts
+with (security_invoker = true) as
+  select
+    p.id,
+    p.body,
+    p.kind,
+    p.created_at,
+    p.author_id,
+    prof.username      as author_username,
+    prof.display_name  as author_display_name,
+    b.olid             as book_olid,
+    b.title            as book_title,
+    b.author           as book_author,
+    b.cover_id         as book_cover_id
+  from public.posts p
+  join public.profiles prof on prof.id = p.author_id
+  left join public.books b   on b.id = p.book_id
+  order by p.created_at desc;
