@@ -43,13 +43,15 @@ export function PostComposer() {
   }
 
   return (
-    <form action={handleSubmit} className="card p-4">
+    <form action={handleSubmit}>
       {/* Attached book, or the search box to pick one */}
       {book ? (
-        <div className="mb-3 flex items-center gap-3">
+        <div className="mb-3 flex items-center gap-3 rounded-card border border-parchment-dark bg-parchment-light p-2">
           <BookCover coverId={book.coverId} title={book.title} size="S" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-ink">{book.title}</p>
+            <p className="truncate font-display font-semibold text-ink">
+              {book.title}
+            </p>
             <p className="truncate text-sm text-ink-faint">
               {book.author ?? "Unknown author"}
             </p>
@@ -57,7 +59,7 @@ export function PostComposer() {
           <button
             type="button"
             onClick={() => setBook(null)}
-            className="text-xs text-ink-faint hover:text-oxblood"
+            className="text-xs font-mono text-ink-faint hover:text-oxblood"
           >
             change
           </button>
@@ -68,16 +70,32 @@ export function PostComposer() {
         </div>
       )}
 
+      <textarea
+        name="body"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        maxLength={POST_MAX_CHARS}
+        rows={3}
+        placeholder={
+          kind === "quote"
+            ? "Transcribe a passage worth keeping…"
+            : kind === "review"
+            ? "A few honest lines on what you thought…"
+            : "Share your latest read or thought…"
+        }
+        className="input resize-none leading-relaxed"
+      />
+
       {/* Kind selector — note / quote / review */}
-      <div className="mb-2 flex gap-1 font-mono text-xs uppercase tracking-wider">
+      <div className="mt-2 flex gap-1.5 font-mono text-[11px] uppercase tracking-wider">
         {(["note", "quote", "review"] as Kind[]).map((k) => (
           <button
             key={k}
             type="button"
             onClick={() => setKind(k)}
-            className={`rounded-[2px] border px-2 py-0.5 ${
+            className={`rounded-pill border px-2.5 py-0.5 transition-colors ${
               kind === k
-                ? "border-forest bg-forest text-parchment-light"
+                ? "border-forest bg-forest text-cream"
                 : "border-parchment-dark text-ink-faint hover:bg-parchment-dark"
             }`}
           >
@@ -86,23 +104,7 @@ export function PostComposer() {
         ))}
       </div>
 
-      <textarea
-        name="body"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        maxLength={POST_MAX_CHARS}
-        rows={4}
-        placeholder={
-          kind === "quote"
-            ? "Transcribe a passage worth keeping…"
-            : kind === "review"
-            ? "A few honest lines on what you thought…"
-            : "What are you thinking about as you read?"
-        }
-        className="input resize-none font-serif text-lg leading-relaxed"
-      />
-
-      <div className="mt-2 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between">
         <span
           className={`font-mono text-xs ${
             nearLimit ? "text-oxblood" : "text-ink-faint"
@@ -110,8 +112,8 @@ export function PostComposer() {
         >
           {remaining} left
         </span>
-        <button type="submit" className="btn-primary" disabled={!canSubmit || pending}>
-          {pending ? "Posting…" : "Post note"}
+        <button type="submit" className="btn-accent" disabled={!canSubmit || pending}>
+          {pending ? "Posting…" : "Post"}
         </button>
       </div>
 

@@ -20,7 +20,7 @@ export function BookCover({
   if (!url) {
     return (
       <div
-        className={`flex items-center justify-center bg-mahogany/90 text-parchment-light rounded-[2px] ${className}`}
+        className={`flex items-center justify-center bg-forest text-cream rounded-[3px] ${className}`}
         style={{ width: dims, height: dims * 1.5 }}
         aria-label={title}
       >

@@ -7,9 +7,11 @@ export default function SignupPage({
   searchParams: { error?: string };
 }) {
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-1 font-display text-3xl">Join Marginalia</h1>
-      <p className="mb-6 text-sm text-ink-faint">
+    <div className="mx-auto max-w-sm py-6">
+      <h1 className="mb-1 font-display text-3xl font-bold text-cream">
+        Join Marginalia
+      </h1>
+      <p className="mb-6 text-sm text-cream-soft">
         A quiet corner for readers. No feed algorithms, ever.
       </p>
 
@@ -55,8 +57,11 @@ export default function SignupPage({
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-ink-faint">
-        Already a member? <Link href="/login">Log in</Link>
+      <p className="mt-4 text-center text-sm text-cream-soft">
+        Already a member?{" "}
+        <Link href="/login" className="text-brass hover:text-brass-light">
+          Log in
+        </Link>
       </p>
     </div>
   );

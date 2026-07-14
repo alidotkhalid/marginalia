@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Avatar } from "@/components/Avatar";
 import { BookCover } from "@/components/BookCover";
 import { FollowButton } from "@/components/FollowButton";
 
@@ -12,14 +13,13 @@ type ReaderRow = {
 };
 
 // A quiet directory of readers to follow — no ranking, just recently joined
-// members and what they're reading. Newest first.
+// members and what they're reading.
 export default async function DiscoverPage() {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Everyone except yourself, with their Currently Reading book embedded.
   let query = supabase
     .from("profiles")
     .select(
@@ -31,7 +31,6 @@ export default async function DiscoverPage() {
 
   const { data: readers } = await query;
 
-  // Which of them do you already follow?
   let followingSet = new Set<string>();
   if (user) {
     const { data: follows } = await supabase
@@ -41,33 +40,35 @@ export default async function DiscoverPage() {
     followingSet = new Set((follows ?? []).map((f) => f.following_id));
   }
 
-  // Supabase's untyped client infers embedded books as an array, but the
-  // currently_reading FK is many-to-one, so at runtime it's a single object or
-  // null. Bridge the inferred type to our runtime-accurate ReaderRow shape.
   const list = (readers ?? []) as unknown as ReaderRow[];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-prose space-y-6">
       <section>
-        <h1 className="mb-1 font-display text-3xl">Find readers</h1>
-        <p className="text-sm text-ink-faint">
+        <h1 className="mb-1 font-display text-3xl font-bold text-cream">
+          Find readers
+        </h1>
+        <p className="text-sm text-cream-soft">
           Follow people whose reading you&rsquo;d like on your feed.
         </p>
       </section>
 
-      <hr className="rule" />
-
       {list.length === 0 ? (
-        <p className="text-sm text-ink-faint">No other readers yet. Invite a friend.</p>
+        <div className="card p-6 text-center text-ink-faint">
+          No other readers yet. Invite a friend.
+        </div>
       ) : (
         <ul className="space-y-4">
           {list.map((r) => (
-            <li key={r.id} className="card p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
+            <li key={r.id} className="card p-5">
+              <div className="flex items-start gap-4">
+                <Link href={`/profile/${r.username}`}>
+                  <Avatar name={r.display_name ?? r.username} size={52} />
+                </Link>
+                <div className="min-w-0 flex-1">
                   <Link
                     href={`/profile/${r.username}`}
-                    className="font-display text-lg text-ink no-underline hover:text-forest"
+                    className="font-display text-lg font-semibold text-ink no-underline hover:text-forest"
                   >
                     {r.display_name ?? `@${r.username}`}
                   </Link>
@@ -85,7 +86,7 @@ export default async function DiscoverPage() {
               </div>
 
               {r.books && (
-                <div className="mt-3 flex items-center gap-3 border-t border-parchment-dark pt-3">
+                <div className="mt-4 flex items-center gap-3 border-t border-parchment-dark pt-3">
                   <BookCover
                     coverId={r.books.cover_id}
                     title={r.books.title}
@@ -93,7 +94,7 @@ export default async function DiscoverPage() {
                   />
                   <div className="min-w-0 text-sm">
                     <span className="tag-reading">Reading</span>
-                    <p className="mt-1 truncate font-display text-ink-soft">
+                    <p className="mt-1 truncate font-display font-semibold text-ink-soft">
                       {r.books.title}
                     </p>
                     <p className="truncate text-ink-faint">

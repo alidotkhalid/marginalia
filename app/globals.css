@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,57 +6,106 @@
 
 @layer base {
   html {
-    /* A faint paper grain via a repeating linear tint keeps it warm, not flat */
-    background-color: theme("colors.parchment.DEFAULT");
+    background-color: theme("colors.forest.dark");
   }
   body {
-    @apply bg-parchment text-ink font-serif antialiased;
-    font-size: 1.075rem;
-    line-height: 1.7;
+    @apply bg-forest-dark text-cream font-sans antialiased;
+    font-size: 0.975rem;
+    line-height: 1.6;
+    /* faint vignette so the green canvas feels lit, not flat */
+    background-image: radial-gradient(
+      120% 80% at 50% -10%,
+      rgba(177, 147, 79, 0.10),
+      transparent 60%
+    );
+    background-attachment: fixed;
   }
   h1, h2, h3, h4 {
-    @apply font-display text-ink;
+    @apply font-display;
     letter-spacing: -0.01em;
   }
-  a {
-    @apply text-forest underline-offset-2 transition-colors;
-  }
-  a:hover {
-    @apply text-forest-dark underline;
-  }
-  /* Selection color: aged brass */
   ::selection {
-    background-color: theme("colors.brass");
-    color: theme("colors.parchment.light");
+    background-color: theme("colors.brass.DEFAULT");
+    color: theme("colors.forest.dark");
   }
 }
 
 @layer components {
-  /* An index-card style surface used for posts, profile blocks, etc. */
+  /* Cream index-card surface (default text is ink for content on cards) */
   .card {
-    @apply bg-parchment-light border border-parchment-dark rounded-card shadow-card;
+    @apply bg-parchment text-ink border border-parchment-dark rounded-card shadow-card;
   }
-  /* A thin brass rule used as a section divider */
-  .rule {
-    @apply border-0 border-t border-brass/40;
-  }
+
+  /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-card font-serif
-           border transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-pill
+           text-sm font-semibold transition-colors
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-forest text-parchment-light border-forest hover:bg-forest-dark no-underline;
+    @apply btn bg-forest text-cream hover:bg-forest-light border border-forest-dark;
+  }
+  .btn-accent {
+    @apply btn bg-brass text-forest-dark hover:bg-brass-light border border-brass-dark;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-ink border-parchment-dark hover:bg-parchment-dark no-underline;
+    @apply btn bg-transparent text-ink border border-parchment-dark hover:bg-parchment-dark;
   }
+  .btn-outline-cream {
+    @apply btn bg-transparent text-cream border border-cream/40 hover:bg-cream/10;
+  }
+
+  /* Inputs */
   .input {
-    @apply w-full bg-parchment-light border border-parchment-dark rounded-card px-3 py-2
-           text-ink placeholder:text-ink-faint focus:outline-none focus:border-forest;
+    @apply w-full bg-parchment-light border border-parchment-dark rounded-card px-3.5 py-2.5
+           text-ink placeholder:text-ink-faint focus:outline-none
+           focus:border-brass focus:ring-2 focus:ring-brass/25;
   }
+
+  /* Monogram avatar (no photo uploads) */
+  .avatar {
+    @apply flex items-center justify-center rounded-pill font-display font-semibold
+           bg-forest text-cream ring-2 ring-parchment-light shrink-0 select-none;
+  }
+
+  /* Follower / following stat block */
+  .stat-num {
+    @apply font-display text-xl font-semibold text-ink leading-none;
+  }
+  .stat-label {
+    @apply block text-[11px] font-mono uppercase tracking-wider text-ink-faint mt-1;
+  }
+
+  /* Reading progress bar */
+  .progress {
+    @apply h-2 w-full rounded-pill bg-parchment-dark overflow-hidden;
+  }
+  .progress > span {
+    @apply block h-full rounded-pill bg-gradient-to-r from-brass to-forest;
+  }
+
   /* "Currently reading" tag */
   .tag-reading {
-    @apply inline-flex items-center gap-1 text-xs font-mono uppercase tracking-wider
-           text-oxblood border border-oxblood/40 rounded-card px-2 py-0.5;
+    @apply inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider
+           text-oxblood border border-oxblood/30 bg-oxblood/5 rounded-pill px-2 py-0.5;
+  }
+
+  /* Tabs (e.g. Search / Filter, All / Community) */
+  .tab {
+    @apply px-1 pb-2 text-sm font-medium text-ink-faint border-b-2 border-transparent
+           hover:text-ink transition-colors cursor-pointer;
+  }
+  .tab-active {
+    @apply text-ink border-brass;
+  }
+
+  /* Thin brass divider */
+  .rule {
+    @apply border-0 border-t border-brass/25;
+  }
+
+  /* Links inside cream cards */
+  .link {
+    @apply text-forest hover:text-brass-dark underline-offset-2 hover:underline;
   }
 }

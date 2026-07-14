@@ -4,35 +4,32 @@ import { PostComposer } from "@/components/PostComposer";
 import { PostCard, type FeedPost } from "@/components/PostCard";
 
 // The Feed — a strictly chronological timeline of notes from people you follow
-// (plus your own). No ranking, no recommendations, no infinite scroll: a finite
-// page of the most recent notes, oldest reading habits honored.
+// (plus your own). No ranking, no recommendations, no infinite scroll.
 export default async function FeedPage() {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Middleware redirects unauthenticated users to /login, but guard anyway.
   if (!user) {
     return (
-      <p className="text-center text-ink-faint">
-        Please <Link href="/login">log in</Link> to read your feed.
+      <p className="text-center text-cream-soft">
+        Please{" "}
+        <Link href="/login" className="text-brass hover:text-brass-light">
+          log in
+        </Link>{" "}
+        to read your feed.
       </p>
     );
   }
 
-  // Who does this user follow? Include the user themselves.
   const { data: following } = await supabase
     .from("follows")
     .select("following_id")
     .eq("follower_id", user.id);
 
-  const authorIds = [
-    user.id,
-    ...(following?.map((f) => f.following_id) ?? []),
-  ];
+  const authorIds = [user.id, ...(following?.map((f) => f.following_id) ?? [])];
 
-  // Pull the most recent notes from that set, newest first.
   const { data: posts } = await supabase
     .from("feed_posts")
     .select("*")
@@ -43,25 +40,31 @@ export default async function FeedPage() {
   const feed = (posts ?? []) as FeedPost[];
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-prose space-y-6">
       <section>
-        <h1 className="mb-1 font-display text-3xl">Today&rsquo;s reading</h1>
-        <p className="mb-4 text-sm text-ink-faint">
+        <h1 className="mb-1 font-display text-3xl font-bold text-cream">
+          Today&rsquo;s reading
+        </h1>
+        <p className="mb-4 text-sm text-cream-soft">
           A quiet, chronological record of what your circle is reading.
         </p>
-        <PostComposer />
+        <div className="card p-5">
+          <PostComposer />
+        </div>
       </section>
-
-      <hr className="rule" />
 
       <section className="space-y-4">
         {feed.length === 0 ? (
-          <div className="card p-6 text-center text-ink-faint">
+          <div className="card p-6 text-center">
             <p className="font-display text-lg text-ink-soft">
               Your feed is a blank page.
             </p>
-            <p className="mt-1 text-sm">
-              Post your first note above, or find readers to follow.
+            <p className="mt-1 text-sm text-ink-faint">
+              Post your first note above, or{" "}
+              <Link href="/discover" className="link">
+                find readers to follow
+              </Link>
+              .
             </p>
           </div>
         ) : (

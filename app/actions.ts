@@ -89,9 +89,27 @@ export async function setCurrentlyReading(book: BookResult) {
   if (!user) redirect("/login");
 
   const bookId = await upsertBook(supabase, book);
+  // Starting a new book resets progress to 0.
   await supabase
     .from("profiles")
-    .update({ currently_reading: bookId })
+    .update({ currently_reading: bookId, reading_progress: 0 })
+    .eq("id", user.id);
+
+  revalidatePath("/", "layout");
+}
+
+/** Set how far along (0–100%) the current user is in their current book. */
+export async function setReadingProgress(progress: number) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const clamped = Math.max(0, Math.min(100, Math.round(progress)));
+  await supabase
+    .from("profiles")
+    .update({ reading_progress: clamped })
     .eq("id", user.id);
 
   revalidatePath("/", "layout");
@@ -107,7 +125,7 @@ export async function clearCurrentlyReading() {
 
   await supabase
     .from("profiles")
-    .update({ currently_reading: null })
+    .update({ currently_reading: null, reading_progress: 0 })
     .eq("id", user.id);
 
   revalidatePath("/", "layout");

@@ -20,6 +20,9 @@ create table if not exists public.profiles (
   -- from the Open Library key at render time — we never store images.
   -- NOTE: the FK to books is added via ALTER below, since books is defined next.
   currently_reading   uuid,
+  -- How far along the reader is in their current book, 0–100%.
+  reading_progress    smallint not null default 0
+                        check (reading_progress between 0 and 100),
   created_at          timestamptz not null default now()
 );
 

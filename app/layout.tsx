@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
+import { Avatar } from "@/components/Avatar";
 import { signOut } from "./actions";
 
 export const metadata: Metadata = {
@@ -21,49 +22,61 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   let username: string | null = null;
+  let displayName: string | null = null;
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("username")
+      .select("username, display_name")
       .eq("id", user.id)
       .single();
     username = data?.username ?? null;
+    displayName = data?.display_name ?? data?.username ?? null;
   }
 
   return (
     <html lang="en">
       <body>
-        <header className="border-b border-brass/40 bg-parchment">
-          <div className="mx-auto flex max-w-prose items-center justify-between px-4 py-4">
+        <header className="sticky top-0 z-20 border-b border-brass/20 bg-parchment/95 backdrop-blur">
+          <div className="mx-auto flex max-w-shell items-center justify-between px-4 py-3 sm:px-6">
             <Link
               href="/"
-              className="font-display text-2xl font-bold tracking-tight text-ink no-underline hover:text-forest"
+              className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-ink no-underline hover:text-forest"
             >
-              Marginalia
+              <span className="text-brass">❦</span> Marginalia
             </Link>
-            <nav className="flex items-center gap-4 text-sm">
+
+            <nav className="flex items-center gap-5 text-sm">
               {user ? (
                 <>
-                  <Link href="/discover" className="text-ink-soft">
+                  <Link href="/" className="font-medium text-ink-soft hover:text-forest">
+                    Home
+                  </Link>
+                  <Link
+                    href="/discover"
+                    className="font-medium text-ink-soft hover:text-forest"
+                  >
                     Discover
                   </Link>
-                  {username && (
-                    <Link href={`/profile/${username}`} className="text-ink-soft">
-                      @{username}
-                    </Link>
-                  )}
                   <form action={signOut}>
-                    <button className="text-ink-faint hover:text-oxblood" type="submit">
+                    <button
+                      className="font-medium text-ink-faint hover:text-oxblood"
+                      type="submit"
+                    >
                       Sign out
                     </button>
                   </form>
+                  {username && (
+                    <Link href={`/profile/${username}`} title={`@${username}`}>
+                      <Avatar name={displayName ?? username} size={34} />
+                    </Link>
+                  )}
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="text-ink-soft">
+                  <Link href="/login" className="font-medium text-ink-soft hover:text-forest">
                     Log in
                   </Link>
-                  <Link href="/signup" className="btn-primary text-sm">
+                  <Link href="/signup" className="btn-accent !py-1.5">
                     Join
                   </Link>
                 </>
@@ -72,9 +85,9 @@ export default async function RootLayout({
           </div>
         </header>
 
-        <main className="mx-auto max-w-prose px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-shell px-4 py-8 sm:px-6">{children}</main>
 
-        <footer className="mx-auto max-w-prose px-4 py-10 text-center text-xs text-ink-faint">
+        <footer className="mx-auto max-w-shell px-4 py-10 text-center text-xs text-cream-soft sm:px-6">
           <hr className="rule mb-4" />
           Marginalia · read deliberately · no algorithms, no ads, no noise
         </footer>

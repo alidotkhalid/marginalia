@@ -7,9 +7,9 @@ export default function LoginPage({
   searchParams: { error?: string };
 }) {
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-1 font-display text-3xl">Welcome back</h1>
-      <p className="mb-6 text-sm text-ink-faint">
+    <div className="mx-auto max-w-sm py-6">
+      <h1 className="mb-1 font-display text-3xl font-bold text-cream">Welcome back</h1>
+      <p className="mb-6 text-sm text-cream-soft">
         Return to your reading room.
       </p>
 
@@ -36,8 +36,11 @@ export default function LoginPage({
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-ink-faint">
-        New here? <Link href="/signup">Create an account</Link>
+      <p className="mt-4 text-center text-sm text-cream-soft">
+        New here?{" "}
+        <Link href="/signup" className="text-brass hover:text-brass-light">
+          Create an account
+        </Link>
       </p>
     </div>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookCover } from "./BookCover";
+import { Avatar } from "./Avatar";
 
 export type FeedPost = {
   id: string;
@@ -33,27 +34,35 @@ function timeAgo(iso: string) {
 // and italic treatment; reviews/notes read as plain body copy.
 export function PostCard({ post }: { post: FeedPost }) {
   return (
-    <article className="card p-4">
-      <header className="mb-2 flex items-baseline justify-between text-sm">
-        <Link
-          href={`/profile/${post.author_username}`}
-          className="font-display text-ink no-underline hover:text-forest"
-        >
-          {post.author_display_name ?? `@${post.author_username}`}
+    <article className="card p-5">
+      <header className="mb-3 flex items-center gap-3">
+        <Link href={`/profile/${post.author_username}`}>
+          <Avatar name={post.author_display_name ?? post.author_username} size={40} />
         </Link>
-        <time className="font-mono text-xs text-ink-faint" dateTime={post.created_at}>
-          {timeAgo(post.created_at)}
-        </time>
+        <div className="flex-1">
+          <Link
+            href={`/profile/${post.author_username}`}
+            className="font-display font-semibold text-ink no-underline hover:text-forest"
+          >
+            {post.author_display_name ?? post.author_username}
+          </Link>
+          <p className="font-mono text-xs text-ink-faint">
+            @{post.author_username} · {timeAgo(post.created_at)}
+          </p>
+        </div>
+        {post.kind !== "note" && (
+          <span className="rounded-pill border border-brass/40 bg-brass/10 px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider text-brass-dark">
+            {post.kind}
+          </span>
+        )}
       </header>
 
       {post.kind === "quote" ? (
-        <blockquote className="border-l-2 border-brass pl-3 font-serif text-lg italic leading-relaxed text-ink-soft">
+        <blockquote className="border-l-2 border-brass pl-3 font-display text-lg italic leading-relaxed text-ink-soft">
           {post.body}
         </blockquote>
       ) : (
-        <p className="whitespace-pre-wrap font-serif text-lg leading-relaxed text-ink">
-          {post.body}
-        </p>
+        <p className="whitespace-pre-wrap leading-relaxed text-ink">{post.body}</p>
       )}
 
       {post.book_title && (
