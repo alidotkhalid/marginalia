@@ -4,9 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { BookResult } from "@/lib/openlibrary";
-
-// Keep in sync with the client-side counter and the DB check constraint.
-export const POST_MAX_CHARS = 500;
+import { POST_MAX_CHARS } from "@/lib/constants";
 
 /**
  * Cache a book row (de-duplicated on Open Library id) and return its uuid.

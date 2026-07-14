@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import type { BookResult } from "@/lib/openlibrary";
-import { createPost, POST_MAX_CHARS } from "@/app/actions";
+import { createPost } from "@/app/actions";
+import { POST_MAX_CHARS } from "@/lib/constants";
 import { BookSearch } from "./BookSearch";
 import { BookCover } from "./BookCover";
 
