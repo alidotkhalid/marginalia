@@ -573,6 +573,77 @@ export async function signOut() {
   redirect("/login");
 }
 
+/** Ask a question to a reader you follow. Trigger enforces follow/block rules. */
+export async function askReader(targetId: string, question: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const q = question.trim();
+  if (!q) return { error: "Type a question first." };
+  if (q.length > 300) return { error: "Keep your question under 300 characters." };
+
+  const { error } = await supabase
+    .from("asks")
+    .insert({ asker_id: user.id, target_id: targetId, question: q });
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Answer an ask: creates a post on your profile showing the question + reply. */
+export async function answerAsk(askId: string, answer: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const text = answer.trim();
+  if (!text) return { error: "Write a reply first." };
+  if (text.length > 2000)
+    return { error: "Keep your reply under 2000 characters." };
+
+  const { data: ask } = await supabase
+    .from("asks")
+    .select("id, question, target_id, asker:profiles!asker_id (username)")
+    .eq("id", askId)
+    .maybeSingle();
+  if (!ask || ask.target_id !== user.id) return { error: "Question not found." };
+
+  const askerUsername =
+    (ask.asker as unknown as { username: string } | null)?.username ?? null;
+
+  const { error: postErr } = await supabase.from("posts").insert({
+    author_id: user.id,
+    kind: "note",
+    body: text,
+    text_note: text,
+    answer_question: ask.question as string,
+    answer_asker: askerUsername,
+  });
+  if (postErr) return { error: postErr.message };
+
+  await supabase.from("asks").delete().eq("id", askId);
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Dismiss (delete) an ask without answering. */
+export async function dismissAsk(askId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase.from("asks").delete().eq("id", askId).eq("target_id", user.id);
+  revalidatePath("/", "layout");
+}
+
 /**
  * Permanently delete the current user's account and all their data (via DB
  * cascade), then sign out. Backed by the delete_current_user() SQL function.

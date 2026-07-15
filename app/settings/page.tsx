@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: profile }, { data: blocksData }, { count: pending }] =
+  const [{ data: profile }, { data: blocksData }, { count: pending }, { count: askCount }] =
     await Promise.all([
       supabase.from("profiles").select("is_private").eq("id", user.id).maybeSingle(),
       supabase
@@ -30,6 +30,10 @@ export default async function SettingsPage() {
         .select("*", { count: "exact", head: true })
         .eq("following_id", user.id)
         .eq("status", "pending"),
+      supabase
+        .from("asks")
+        .select("*", { count: "exact", head: true })
+        .eq("target_id", user.id),
     ]);
 
   const isPrivate = (profile?.is_private as boolean) ?? false;
@@ -53,9 +57,14 @@ export default async function SettingsPage() {
       {/* Content */}
       <section className="card p-5">
         <h2 className="mb-4 font-display text-xl text-ink">Your content</h2>
-        <Link href="/drafts" className="link text-sm">
-          Saved drafts →
-        </Link>
+        <div className="flex flex-col gap-2 text-sm">
+          <Link href="/asks" className="link">
+            Asks{askCount ? ` (${askCount})` : ""} →
+          </Link>
+          <Link href="/drafts" className="link">
+            Saved drafts →
+          </Link>
+        </div>
       </section>
 
       {/* Blocked users */}

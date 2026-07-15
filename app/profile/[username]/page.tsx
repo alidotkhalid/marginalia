@@ -6,6 +6,7 @@ import { PostCard, type FeedPost } from "@/components/PostCard";
 import { PostComposer } from "@/components/PostComposer";
 import { FollowButton } from "@/components/FollowButton";
 import { BlockButton } from "@/components/BlockButton";
+import { AskButton } from "@/components/AskButton";
 import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
 import { EditableName } from "@/components/EditableName";
 import { EditableBio } from "@/components/EditableBio";
@@ -185,7 +186,10 @@ export default async function ProfilePage({
               </div>
               {!isSelf && user && (
                 <div className="flex flex-col items-end gap-1">
-                  <FollowButton targetId={profile.id} initialStatus={myStatus} />
+                  <div className="flex items-center gap-2">
+                    {myStatus === "accepted" && <AskButton targetId={profile.id} />}
+                    <FollowButton targetId={profile.id} initialStatus={myStatus} />
+                  </div>
                   <BlockButton targetId={profile.id} initialBlocked={iBlockedThem} />
                 </div>
               )}

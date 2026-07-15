@@ -73,6 +73,9 @@ create table if not exists public.posts (
                  check (kind in ('note', 'quote', 'review')),
   -- Genre tag (slug from the app's genre list), used for hashtag browsing.
   genre        text,
+  -- When a post answers an "Ask", the question + asker are stored for display.
+  answer_question text,
+  answer_asker    text,
   created_at   timestamptz not null default now(),
   constraint posts_has_section
     check (coalesce(text_note, text_quote, text_review, body) is not null)
@@ -247,6 +250,55 @@ create policy "owners delete their drafts"
   on public.drafts for delete using (auth.uid() = author_id);
 
 -- ============================================================================
+-- ASKS — followers can ask questions; answering creates a post.
+-- ============================================================================
+create table if not exists public.asks (
+  id          uuid primary key default gen_random_uuid(),
+  asker_id    uuid not null references public.profiles (id) on delete cascade,
+  target_id   uuid not null references public.profiles (id) on delete cascade,
+  question    text not null check (char_length(question) between 1 and 300),
+  created_at  timestamptz not null default now(),
+  check (asker_id <> target_id)
+);
+
+create index if not exists asks_target_idx
+  on public.asks (target_id, created_at desc);
+
+alter table public.asks enable row level security;
+
+create or replace function public.handle_ask()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (
+    select 1 from public.blocks
+    where (blocker_id = new.target_id and blocked_id = new.asker_id)
+       or (blocker_id = new.asker_id and blocked_id = new.target_id)
+  ) then
+    raise exception 'Cannot ask: a block is in place.';
+  end if;
+  if not exists (
+    select 1 from public.follows
+    where follower_id = new.asker_id and following_id = new.target_id
+      and status = 'accepted'
+  ) then
+    raise exception 'You can only ask people you follow.';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists on_ask_insert on public.asks;
+create trigger on_ask_insert
+  before insert on public.asks
+  for each row execute function public.handle_ask();
+
+create policy "asks visible to target or asker"
+  on public.asks for select using (auth.uid() = target_id or auth.uid() = asker_id);
+create policy "followers create asks"
+  on public.asks for insert to authenticated with check (auth.uid() = asker_id);
+create policy "target or asker delete asks"
+  on public.asks for delete using (auth.uid() = target_id or auth.uid() = asker_id);
+
+-- ============================================================================
 -- TRIGGER: auto-create a profile row when a new auth user signs up.
 -- The username is passed through auth `raw_user_meta_data.username` at signup.
 -- ============================================================================
@@ -298,7 +350,9 @@ with (security_invoker = true) as
     (select count(*) from public.comments c where c.post_id = p.id)::int as comment_count,
     p.text_note,
     p.text_quote,
-    p.text_review
+    p.text_review,
+    p.answer_question,
+    p.answer_asker
   from public.posts p
   join public.profiles prof on prof.id = p.author_id
   left join public.books b   on b.id = p.book_id
