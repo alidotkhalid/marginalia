@@ -35,6 +35,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
   const [genre, setGenre] = useState(initialDraft?.genre ?? "");
   const [draftId, setDraftId] = useState<string | null>(initialDraft?.id ?? null);
   const [draftMsg, setDraftMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"post" | "draft" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -68,6 +69,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
     formData.set("text_quote", bodies.quote);
     formData.set("text_review", bodies.review);
     formData.set("genre", genre);
+    setBusy("post");
     startTransition(async () => {
       const res = await createPost(formData);
       if (res?.error) {
@@ -81,12 +83,14 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         setDraftId(null);
         setDraftMsg(null);
       }
+      setBusy(null);
     });
   }
 
   function saveCurrentDraft() {
     setError(null);
     setDraftMsg(null);
+    setBusy("draft");
     startTransition(async () => {
       const res = await saveDraft({
         id: draftId ?? undefined,
@@ -101,6 +105,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         setDraftId(res.id);
         setDraftMsg("Draft saved");
       }
+      setBusy(null);
     });
   }
 
@@ -200,11 +205,12 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
             disabled={pending || (!anyText && !book)}
             className="btn-ghost !py-2 text-sm"
           >
-            Save draft
+            {busy === "draft" && <Spinner inline />}
+            {busy === "draft" ? "Saving…" : "Save draft"}
           </button>
           <button type="submit" className="btn-accent" disabled={!canSubmit || pending}>
-            {pending && <Spinner inline />}
-            {pending ? "Posting…" : "Post"}
+            {busy === "post" && <Spinner inline />}
+            {busy === "post" ? "Posting…" : "Post"}
           </button>
         </div>
       </div>
