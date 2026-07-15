@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { followUser, unfollowUser, type FollowStatus } from "@/app/actions";
+import { Spinner } from "./Spinner";
 
 // Three-state follow control: Follow → (Requested | Following) → back to Follow.
 // Private accounts return "pending" (a request); public ones return "accepted".
@@ -43,6 +44,7 @@ export function FollowButton({
       disabled={pending}
       onClick={toggle}
     >
+      {pending && <Spinner inline />}
       {label}
     </button>
   );

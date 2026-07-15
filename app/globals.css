@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,600&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -12,10 +12,9 @@
     @apply bg-forest-dark text-cream font-sans antialiased;
     font-size: 0.975rem;
     line-height: 1.6;
-    /* faint vignette so the green canvas feels lit, not flat */
     background-image: radial-gradient(
       120% 80% at 50% -10%,
-      rgba(177, 147, 79, 0.10),
+      rgba(201, 164, 79, 0.12),
       transparent 60%
     );
     background-attachment: fixed;
@@ -31,81 +30,95 @@
 }
 
 @layer components {
-  /* Cream index-card surface (default text is ink for content on cards) */
   .card {
     @apply bg-parchment text-ink border border-parchment-dark rounded-card shadow-card;
   }
 
-  /* Buttons */
+  /* Gold, lightly-italic section titles inside cards — the academia signature */
+  .section-title {
+    @apply font-display italic text-brass;
+  }
+
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-pill
            text-sm font-semibold transition-colors
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           disabled:opacity-60 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-forest text-cream hover:bg-forest-light border border-forest-dark;
+    @apply btn bg-forest text-cream hover:bg-forest-light border border-forest-light;
   }
   .btn-accent {
     @apply btn bg-brass text-forest-dark hover:bg-brass-light border border-brass-dark;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-ink border border-parchment-dark hover:bg-parchment-dark;
-  }
-  .btn-outline-cream {
-    @apply btn bg-transparent text-cream border border-cream/40 hover:bg-cream/10;
+    @apply btn bg-transparent text-ink border border-parchment-dark hover:bg-parchment-light;
   }
 
-  /* Inputs */
   .input {
     @apply w-full bg-parchment-light border border-parchment-dark rounded-card px-3.5 py-2.5
            text-ink placeholder:text-ink-faint focus:outline-none
            focus:border-brass focus:ring-2 focus:ring-brass/25;
   }
 
-  /* Monogram avatar (no photo uploads) */
+  /* Pixel-identicon avatar frame */
   .avatar {
-    @apply flex items-center justify-center rounded-pill font-display font-semibold
-           bg-forest text-cream ring-2 ring-parchment-light shrink-0 select-none;
+    @apply block shrink-0 overflow-hidden rounded-md ring-2 ring-parchment-dark
+           bg-forest-deep select-none;
   }
 
-  /* Follower / following stat block */
   .stat-num {
-    @apply font-display text-xl font-semibold text-ink leading-none;
+    @apply font-display text-xl font-semibold leading-none;
   }
   .stat-label {
     @apply block text-[11px] font-mono uppercase tracking-wider text-ink-faint mt-1;
   }
 
-  /* Reading progress bar */
   .progress {
     @apply h-2 w-full rounded-pill bg-parchment-dark overflow-hidden;
   }
   .progress > span {
-    @apply block h-full rounded-pill bg-gradient-to-r from-brass to-forest;
+    @apply block h-full rounded-pill bg-brass;
   }
 
-  /* "Currently reading" tag */
   .tag-reading {
     @apply inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider
-           text-oxblood border border-oxblood/30 bg-oxblood/5 rounded-pill px-2 py-0.5;
+           text-brass border border-brass/30 bg-brass/10 rounded-pill px-2 py-0.5;
   }
 
-  /* Tabs (e.g. Search / Filter, All / Community) */
-  .tab {
-    @apply px-1 pb-2 text-sm font-medium text-ink-faint border-b-2 border-transparent
-           hover:text-ink transition-colors cursor-pointer;
-  }
-  .tab-active {
-    @apply text-ink border-brass;
-  }
-
-  /* Thin brass divider */
   .rule {
     @apply border-0 border-t border-brass/25;
   }
 
-  /* Links inside cream cards */
   .link {
-    @apply text-forest hover:text-brass-dark underline-offset-2 hover:underline;
+    @apply text-brass hover:text-brass-light underline-offset-2 hover:underline;
+  }
+
+  /* Modern circular spinner — inherits currentColor */
+  .spinner {
+    display: inline-block;
+    border-radius: 9999px;
+    border-style: solid;
+    border-color: rgba(201, 164, 79, 0.25);
+    border-top-color: theme("colors.brass.DEFAULT");
+    animation: spin 0.7s linear infinite;
+  }
+  /* Small inline spinner for buttons (uses button's own text color) */
+  .spinner-sm {
+    display: inline-block;
+    width: 0.9em;
+    height: 0.9em;
+    border-radius: 9999px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-top-color: transparent;
+    opacity: 0.9;
+    animation: spin 0.6s linear infinite;
+    vertical-align: -0.1em;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

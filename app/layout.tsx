@@ -49,7 +49,7 @@ export default async function RootLayout({
           <div className="mx-auto flex max-w-shell items-center justify-between px-4 py-3 sm:px-6">
             <Link
               href="/"
-              className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-ink no-underline hover:text-forest"
+              className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-ink no-underline hover:text-brass"
             >
               <span className="text-brass">❦</span> Marginalia
             </Link>
@@ -57,18 +57,18 @@ export default async function RootLayout({
             <nav className="flex items-center gap-5 text-sm">
               {user ? (
                 <>
-                  <Link href="/" className="font-medium text-ink-soft hover:text-forest">
+                  <Link href="/" className="font-medium text-ink-soft hover:text-brass">
                     Home
                   </Link>
                   <Link
                     href="/discover"
-                    className="font-medium text-ink-soft hover:text-forest"
+                    className="font-medium text-ink-soft hover:text-brass"
                   >
                     Discover
                   </Link>
                   <Link
                     href="/requests"
-                    className="relative font-medium text-ink-soft hover:text-forest"
+                    className="relative font-medium text-ink-soft hover:text-brass"
                   >
                     Requests
                     {pendingRequests > 0 && (
@@ -78,8 +78,14 @@ export default async function RootLayout({
                     )}
                   </Link>
                   <Link
+                    href="/customize"
+                    className="font-medium text-ink-soft hover:text-brass"
+                  >
+                    Customize
+                  </Link>
+                  <Link
                     href="/settings"
-                    className="font-medium text-ink-soft hover:text-forest"
+                    className="font-medium text-ink-soft hover:text-brass"
                   >
                     Settings
                   </Link>
@@ -99,7 +105,7 @@ export default async function RootLayout({
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="font-medium text-ink-soft hover:text-forest">
+                  <Link href="/login" className="font-medium text-ink-soft hover:text-brass">
                     Log in
                   </Link>
                   <Link href="/signup" className="btn-accent !py-1.5">

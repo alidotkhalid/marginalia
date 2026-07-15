@@ -1,9 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 // -----------------------------------------------------------------------------
-// "Deep Green Academia" theme — a rich forest-green canvas with cream/parchment
-// cards floating on top, brass and oxblood accents, and a modern touch:
-// clean Inter sans for UI/body, elegant Playfair Display serif for names/titles.
-// No user image uploads; book covers come only from Open Library.
+// "Dark Academia" theme — a warm near-black canvas, dark walnut cards, cream
+// text, and aged-gold (brass) accents with a modern touch: clean Inter sans for
+// body/UI, elegant Playfair Display serif for names/titles. No image uploads;
+// avatars are generated pixel-art identicons.
 // -----------------------------------------------------------------------------
 module.exports = {
   content: [
@@ -13,65 +13,64 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // The page canvas — deep forest green
+        // Canvas + deep surfaces / primary buttons (warm dark walnut)
         forest: {
-          DEFAULT: "#2f4a3c",
-          light: "#3d5f4c",
-          dark: "#233829", // primary page background
-          deep: "#1c2c22",
+          deep: "#120e08",
+          dark: "#1a1610", // page background
+          DEFAULT: "#4a3826", // primary buttons, avatar frame
+          light: "#5e4832", // hover
         },
-        // Cards / surfaces — warm parchment cream
+        // Card surfaces (dark walnut, slightly above the canvas)
         parchment: {
-          DEFAULT: "#f6f1e7",
-          light: "#fbf8f0",
-          dark: "#e9e0cd", // borders / subtle fills
+          DEFAULT: "#241d13",
+          light: "#2d2517", // inputs / raised surfaces
+          dark: "#3c3020", // borders
         },
-        // Ink — text on cream cards
+        // Text on cards (warm cream)
         ink: {
-          DEFAULT: "#2b2723",
-          soft: "#4d463d",
-          faint: "#8a8073",
+          DEFAULT: "#e8dcbd",
+          soft: "#c1b291",
+          faint: "#8c7e62",
         },
-        // Cream — text on the green canvas
+        // Text on the canvas
         cream: {
-          DEFAULT: "#f4efe1",
-          soft: "#d6cdb8",
+          DEFAULT: "#ecdfc0",
+          soft: "#b2a483",
         },
-        // Aged brass — primary metallic accent (links, progress, highlights)
+        // Aged gold — headings, links, progress, highlights
         brass: {
-          DEFAULT: "#b1934f",
-          light: "#c7ab6e",
-          dark: "#8f7539",
+          DEFAULT: "#c9a44f",
+          light: "#ddba6c",
+          dark: "#a8842f",
         },
-        // Oxblood — sparing warm accent (reading tag, hearts)
+        // Warm terracotta red — sparing accent (errors, block, hearts)
         oxblood: {
-          DEFAULT: "#7c2d3a",
-          light: "#9a3c4b",
+          DEFAULT: "#a24a3d",
+          light: "#bd5e4f",
         },
       },
       fontFamily: {
-        // Instagram-style clean sans for body & UI
         sans: ['"Inter"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
-        // Elegant serif for names & section titles
         display: ['"Playfair Display"', "Georgia", "serif"],
-        // Small meta / counters
         mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       maxWidth: {
         prose: "44rem",
-        shell: "72rem", // wide dashboard shell for the two-column profile
+        shell: "72rem",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(20, 30, 24, 0.10), 0 8px 24px rgba(20, 30, 24, 0.12)",
-        soft: "0 1px 3px rgba(20, 30, 24, 0.08)",
+        card: "0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.35)",
+        soft: "0 1px 3px rgba(0,0,0,0.3)",
       },
       borderRadius: {
         card: "14px",
         pill: "9999px",
       },
       backgroundImage: {
-        // A subtle brass→forest banner used behind profile headers (no photos)
-        "shelf": "linear-gradient(135deg, #233829 0%, #3d5f4c 45%, #8f7539 100%)",
+        "shelf": "linear-gradient(135deg, #1a1610 0%, #4a3826 50%, #c9a44f 100%)",
+      },
+      keyframes: {
+        spin: { to: { transform: "rotate(360deg)" } },
       },
     },
   },

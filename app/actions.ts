@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { BookResult } from "@/lib/openlibrary";
-import { POST_MAX_CHARS } from "@/lib/constants";
+import { postLimit } from "@/lib/constants";
 
 /**
  * Cache a book row (de-duplicated on Open Library id) and return its uuid.
@@ -51,12 +51,14 @@ export async function createPost(formData: FormData) {
   if (!user) redirect("/login");
 
   const body = String(formData.get("body") ?? "").trim();
-  const kind = String(formData.get("kind") ?? "note");
+  const kindRaw = String(formData.get("kind") ?? "note");
+  const kind = ["note", "quote", "review"].includes(kindRaw) ? kindRaw : "note";
   const bookRaw = formData.get("book");
 
   if (!body) return { error: "Write something first." };
-  if (body.length > POST_MAX_CHARS)
-    return { error: `Keep it under ${POST_MAX_CHARS} characters.` };
+  const limit = postLimit(kind);
+  if (body.length > limit)
+    return { error: `Keep your ${kind} under ${limit} characters.` };
   if (!bookRaw) return { error: "Attach a book to your note." };
 
   let bookId: string;
@@ -71,7 +73,7 @@ export async function createPost(formData: FormData) {
     author_id: user.id,
     book_id: bookId,
     body,
-    kind: ["note", "quote", "review"].includes(kind) ? kind : "note",
+    kind,
   });
 
   if (error) return { error: error.message };

@@ -8,7 +8,6 @@ import { FollowButton } from "@/components/FollowButton";
 import { BlockButton } from "@/components/BlockButton";
 import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
 import { EditableName } from "@/components/EditableName";
-import { ProfileCustomizer } from "@/components/ProfileCustomizer";
 import { ReadShelf, type ReadBook } from "@/components/ReadShelf";
 import { bannerBackground } from "@/lib/theme";
 import type { FollowStatus } from "@/app/actions";
@@ -214,7 +213,7 @@ export default async function ProfilePage({
           <aside className="space-y-6">
             {isSelf && (
               <section className="card p-5">
-                <h3 className="mb-3 font-display text-lg text-ink">Create a Post</h3>
+                <h3 className="section-title mb-3 text-lg">Create a Post</h3>
                 <PostComposer />
               </section>
             )}
@@ -224,7 +223,7 @@ export default async function ProfilePage({
                 <CurrentlyReadingEditor current={currentBook} progress={progress} />
               ) : (
                 <>
-                  <h3 className="mb-3 font-display text-lg text-ink">
+                  <h3 className="section-title mb-3 text-lg">
                     Currently Reading
                   </h3>
                   {currentBook ? (
@@ -257,7 +256,7 @@ export default async function ProfilePage({
             </section>
 
             <section className="card p-5">
-              <h3 className="mb-3 font-display text-lg text-ink">
+              <h3 className="section-title mb-3 text-lg">
                 Books Read{" "}
                 <span className="font-mono text-xs text-ink-faint">
                   ({readShelf.length})
@@ -266,11 +265,6 @@ export default async function ProfilePage({
               <ReadShelf books={readShelf} isSelf={isSelf} />
             </section>
 
-            {isSelf && (
-              <section className="card p-5">
-                <ProfileCustomizer accent={accent} banner={banner} />
-              </section>
-            )}
           </aside>
 
           <section className="space-y-4">
@@ -278,7 +272,7 @@ export default async function ProfilePage({
               className="flex items-center gap-4 border-b-2 pb-1"
               style={{ borderColor: accent }}
             >
-              <span className="pb-1 text-sm font-semibold text-ink">Notes</span>
+              <span className="pb-1 text-sm font-semibold text-cream">Notes</span>
             </div>
             {feed.length === 0 ? (
               <div className="card p-6 text-center">

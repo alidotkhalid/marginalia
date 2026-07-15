@@ -37,7 +37,7 @@ export function EditableName({ current }: { current: string }) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-forest"
+          className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-brass"
           aria-label="Edit name"
         >
           ✎ edit

@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import type { BookResult } from "@/lib/openlibrary";
 import { createPost } from "@/app/actions";
-import { POST_MAX_CHARS } from "@/lib/constants";
+import { postLimit } from "@/lib/constants";
 import { BookSearch } from "./BookSearch";
 import { BookCover } from "./BookCover";
+import { Spinner } from "./Spinner";
 
 type Kind = "note" | "quote" | "review";
 
@@ -18,7 +19,8 @@ export function PostComposer() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const remaining = POST_MAX_CHARS - body.length;
+  const limit = postLimit(kind);
+  const remaining = limit - body.length;
   const nearLimit = remaining <= 40;
   const canSubmit = book !== null && body.trim().length > 0 && remaining >= 0;
 
@@ -74,8 +76,8 @@ export function PostComposer() {
         name="body"
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        maxLength={POST_MAX_CHARS}
-        rows={3}
+        maxLength={limit}
+        rows={kind === "review" ? 6 : 3}
         placeholder={
           kind === "quote"
             ? "Transcribe a passage worth keeping…"
@@ -113,6 +115,7 @@ export function PostComposer() {
           {remaining} left
         </span>
         <button type="submit" className="btn-accent" disabled={!canSubmit || pending}>
+          {pending && <Spinner inline />}
           {pending ? "Posting…" : "Post"}
         </button>
       </div>

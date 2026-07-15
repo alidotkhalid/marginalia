@@ -59,12 +59,12 @@ export function CurrentlyReadingEditor({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-display text-lg text-ink">Currently Reading</h3>
+        <h3 className="section-title text-lg">Currently Reading</h3>
         {!editing && (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-forest"
+            className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-brass"
             disabled={pending}
           >
             {current ? "change" : "set"}

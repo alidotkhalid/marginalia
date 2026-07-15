@@ -40,7 +40,7 @@ export function BlockButton({
       <button
         onClick={doUnblock}
         disabled={pending}
-        className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-forest"
+        className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-brass"
       >
         Unblock
       </button>

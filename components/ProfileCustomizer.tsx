@@ -13,12 +13,14 @@ const PRESETS = ["#b1934f", "#7c2d3a", "#2f4a3c", "#3a5a78", "#6d4a86", "#a8632a
 export function ProfileCustomizer({
   accent,
   banner,
+  startOpen = false,
 }: {
   accent: string;
   banner: string;
+  startOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [color, setColor] = useState(accent);
   const [style, setStyle] = useState(banner);
   const [pending, startTransition] = useTransition();
@@ -26,7 +28,6 @@ export function ProfileCustomizer({
   function save() {
     startTransition(async () => {
       await updateProfileTheme(color, style);
-      setOpen(false);
       router.refresh();
     });
   }
@@ -38,7 +39,7 @@ export function ProfileCustomizer({
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between"
       >
-        <h3 className="font-display text-lg text-ink">Customize</h3>
+        <h3 className="section-title text-lg">Customize</h3>
         <span className="text-xs font-mono text-ink-faint">{open ? "close" : "open"}</span>
       </button>
 

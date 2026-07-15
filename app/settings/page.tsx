@@ -65,7 +65,7 @@ export default async function SettingsPage() {
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/profile/${b.blocked?.username ?? ""}`}
-                    className="font-display font-semibold text-ink no-underline hover:text-forest"
+                    className="font-display font-semibold text-ink no-underline hover:text-brass"
                   >
                     {b.blocked?.display_name ?? b.blocked?.username ?? "Unknown"}
                   </Link>

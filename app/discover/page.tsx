@@ -79,7 +79,7 @@ export default async function DiscoverPage() {
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/profile/${r.username}`}
-                    className="font-display text-lg font-semibold text-ink no-underline hover:text-forest"
+                    className="font-display text-lg font-semibold text-ink no-underline hover:text-brass"
                   >
                     {r.display_name ?? `@${r.username}`}
                   </Link>

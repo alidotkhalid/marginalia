@@ -54,7 +54,7 @@ export default async function RequestsPage() {
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/profile/${r.follower?.username ?? ""}`}
-                  className="font-display font-semibold text-ink no-underline hover:text-forest"
+                  className="font-display font-semibold text-ink no-underline hover:text-brass"
                 >
                   {r.follower?.display_name ?? r.follower?.username ?? "Unknown"}
                 </Link>

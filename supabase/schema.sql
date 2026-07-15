@@ -63,7 +63,7 @@ create table if not exists public.posts (
   id           uuid primary key default gen_random_uuid(),
   author_id    uuid not null references public.profiles (id) on delete cascade,
   book_id      uuid references public.books (id) on delete set null,
-  body         text not null check (char_length(body) between 1 and 500),
+  body         text not null check (char_length(body) between 1 and 2000),
   -- Optional label so the feed can distinguish a quote from a thought/review.
   kind         text not null default 'note'
                  check (kind in ('note', 'quote', 'review')),

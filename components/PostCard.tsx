@@ -42,7 +42,7 @@ export function PostCard({ post }: { post: FeedPost }) {
         <div className="flex-1">
           <Link
             href={`/profile/${post.author_username}`}
-            className="font-display font-semibold text-ink no-underline hover:text-forest"
+            className="font-display font-semibold text-ink no-underline hover:text-brass"
           >
             {post.author_display_name ?? post.author_username}
           </Link>
