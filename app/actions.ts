@@ -98,7 +98,11 @@ export async function setCurrentlyReading(book: BookResult) {
   revalidatePath("/", "layout");
 }
 
-/** Set how far along (0–100%) the current user is in their current book. */
+/**
+ * Set how far along (0–100%) the current user is in their current book.
+ * Reaching 100% "finishes" the book: it moves to the Read shelf and the
+ * Currently Reading slot is cleared so a new book can be started.
+ */
 export async function setReadingProgress(progress: number) {
   const supabase = createClient();
   const {
@@ -107,11 +111,103 @@ export async function setReadingProgress(progress: number) {
   if (!user) redirect("/login");
 
   const clamped = Math.max(0, Math.min(100, Math.round(progress)));
+
+  if (clamped >= 100) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("currently_reading")
+      .eq("id", user.id)
+      .maybeSingle();
+    const currentId = prof?.currently_reading as string | null | undefined;
+    if (currentId) {
+      await supabase
+        .from("read_books")
+        .upsert(
+          { user_id: user.id, book_id: currentId },
+          { onConflict: "user_id,book_id", ignoreDuplicates: true }
+        );
+    }
+    await supabase
+      .from("profiles")
+      .update({ currently_reading: null, reading_progress: 0 })
+      .eq("id", user.id);
+  } else {
+    await supabase
+      .from("profiles")
+      .update({ reading_progress: clamped })
+      .eq("id", user.id);
+  }
+
+  revalidatePath("/", "layout");
+}
+
+/** Update the reader's display name (their handle/@username never changes). */
+export async function updateDisplayName(formData: FormData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const name = String(formData.get("display_name") ?? "").trim().slice(0, 60);
+  if (!name) return { error: "Your name can't be empty." };
+
+  await supabase.from("profiles").update({ display_name: name }).eq("id", user.id);
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Save the reader's profile accent color (#rrggbb) and banner style. */
+export async function updateProfileTheme(accentColor: string, bannerStyle: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const color = /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#b1934f";
+  const banner = ["gradient", "shelf", "marble", "plain"].includes(bannerStyle)
+    ? bannerStyle
+    : "gradient";
+
   await supabase
     .from("profiles")
-    .update({ reading_progress: clamped })
+    .update({ accent_color: color, banner_style: banner })
     .eq("id", user.id);
+  revalidatePath("/", "layout");
+}
 
+/** Add a book to the current user's "Books Read" shelf. */
+export async function addReadBook(book: BookResult) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const bookId = await upsertBook(supabase, book);
+  await supabase
+    .from("read_books")
+    .upsert(
+      { user_id: user.id, book_id: bookId },
+      { onConflict: "user_id,book_id", ignoreDuplicates: true }
+    );
+  revalidatePath("/", "layout");
+}
+
+/** Remove a book from the current user's "Books Read" shelf. */
+export async function removeReadBook(bookId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("read_books")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("book_id", bookId);
   revalidatePath("/", "layout");
 }
 

@@ -23,6 +23,11 @@ create table if not exists public.profiles (
   -- How far along the reader is in their current book, 0–100%.
   reading_progress    smallint not null default 0
                         check (reading_progress between 0 and 100),
+  -- Profile customization
+  accent_color        text not null default '#b1934f'
+                        check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
+  banner_style        text not null default 'gradient'
+                        check (banner_style in ('gradient', 'shelf', 'marble', 'plain')),
   created_at          timestamptz not null default now()
 );
 
@@ -85,14 +90,28 @@ create table if not exists public.follows (
 create index if not exists follows_following_idx
   on public.follows (following_id);
 
+-- ----------------------------------------------------------------------------
+-- 5. READ_BOOKS — a reader's shelf of finished books (grows over time).
+-- ----------------------------------------------------------------------------
+create table if not exists public.read_books (
+  user_id      uuid not null references public.profiles (id) on delete cascade,
+  book_id      uuid not null references public.books (id) on delete cascade,
+  finished_at  timestamptz not null default now(),
+  primary key (user_id, book_id)
+);
+
+create index if not exists read_books_user_idx
+  on public.read_books (user_id, finished_at desc);
+
 -- ============================================================================
 -- ROW LEVEL SECURITY
 -- Everything is locked down by default; policies grant the minimum needed.
 -- ============================================================================
-alter table public.profiles enable row level security;
-alter table public.books    enable row level security;
-alter table public.posts    enable row level security;
-alter table public.follows  enable row level security;
+alter table public.profiles   enable row level security;
+alter table public.books      enable row level security;
+alter table public.posts      enable row level security;
+alter table public.follows    enable row level security;
+alter table public.read_books enable row level security;
 
 -- PROFILES ------------------------------------------------------------------
 -- Profiles are public (needed to render feeds & profile pages).
@@ -135,6 +154,17 @@ create policy "users can follow on their own behalf"
 
 create policy "users can unfollow on their own behalf"
   on public.follows for delete using (auth.uid() = follower_id);
+
+-- READ_BOOKS ----------------------------------------------------------------
+create policy "read shelves are viewable by everyone"
+  on public.read_books for select using (true);
+
+create policy "users add to their own shelf"
+  on public.read_books for insert to authenticated
+  with check (auth.uid() = user_id);
+
+create policy "users remove from their own shelf"
+  on public.read_books for delete using (auth.uid() = user_id);
 
 -- ============================================================================
 -- TRIGGER: auto-create a profile row when a new auth user signs up.

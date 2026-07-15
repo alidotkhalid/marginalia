@@ -6,7 +6,10 @@ import { PostCard, type FeedPost } from "@/components/PostCard";
 import { PostComposer } from "@/components/PostComposer";
 import { FollowButton } from "@/components/FollowButton";
 import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
-import { BookLookup } from "@/components/BookLookup";
+import { EditableName } from "@/components/EditableName";
+import { ProfileCustomizer } from "@/components/ProfileCustomizer";
+import { ReadShelf, type ReadBook } from "@/components/ReadShelf";
+import { bannerBackground } from "@/lib/theme";
 
 type CurrentBook = {
   title: string;
@@ -24,8 +27,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      // FK-hint embed: single book row (or null) under the `books` key.
-      "id, username, display_name, bio, reading_progress, books!currently_reading (title, author, cover_id)"
+      "id, username, display_name, bio, reading_progress, accent_color, banner_style, books!currently_reading (title, author, cover_id)"
     )
     .eq("username", params.username)
     .maybeSingle();
@@ -48,8 +50,7 @@ export default async function ProfilePage({
     isFollowing = !!data;
   }
 
-  // Counts (followers + following) and this reader's notes, in parallel.
-  const [{ count: followers }, { count: following }, { data: posts }] =
+  const [{ count: followers }, { count: following }, { data: posts }, { data: read }] =
     await Promise.all([
       supabase
         .from("follows")
@@ -65,18 +66,40 @@ export default async function ProfilePage({
         .eq("author_id", profile.id)
         .order("created_at", { ascending: false })
         .limit(50),
+      supabase
+        .from("read_books")
+        .select("book_id, finished_at, books ( title, author, cover_id )")
+        .eq("user_id", profile.id)
+        .order("finished_at", { ascending: false }),
     ]);
 
   const currentBook = profile.books as unknown as CurrentBook;
   const progress = (profile.reading_progress as number) ?? 0;
+  const accent = (profile.accent_color as string) ?? "#b1934f";
+  const banner = (profile.banner_style as string) ?? "gradient";
   const feed = (posts ?? []) as FeedPost[];
   const displayName = profile.display_name ?? profile.username;
+
+  const readShelf: ReadBook[] = (
+    (read ?? []) as unknown as {
+      book_id: string;
+      books: { title: string; author: string | null; cover_id: number | null } | null;
+    }[]
+  ).map((r) => ({
+    book_id: r.book_id,
+    title: r.books?.title ?? "Untitled",
+    author: r.books?.author ?? null,
+    cover_id: r.books?.cover_id ?? null,
+  }));
 
   return (
     <div className="space-y-6">
       {/* ---- Profile header ---- */}
       <header className="card overflow-hidden">
-        <div className="h-28 bg-shelf sm:h-32" />
+        <div
+          className="h-28 sm:h-32"
+          style={{ background: bannerBackground(accent, banner) }}
+        />
         <div className="px-5 pb-5 sm:px-7">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
@@ -86,9 +109,13 @@ export default async function ProfilePage({
                 className="-mt-12 !ring-4 !ring-parchment"
               />
               <div className="pb-1">
-                <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
-                  {displayName}
-                </h1>
+                {isSelf ? (
+                  <EditableName current={displayName} />
+                ) : (
+                  <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
+                    {displayName}
+                  </h1>
+                )}
                 <p className="font-mono text-sm text-ink-faint">
                   @{profile.username}
                 </p>
@@ -97,11 +124,15 @@ export default async function ProfilePage({
 
             <div className="flex items-center gap-6 pb-1">
               <div className="text-center">
-                <span className="stat-num">{followers ?? 0}</span>
+                <span className="stat-num" style={{ color: accent }}>
+                  {followers ?? 0}
+                </span>
                 <span className="stat-label">Followers</span>
               </div>
               <div className="text-center">
-                <span className="stat-num">{following ?? 0}</span>
+                <span className="stat-num" style={{ color: accent }}>
+                  {following ?? 0}
+                </span>
                 <span className="stat-label">Following</span>
               </div>
               {!isSelf && user && (
@@ -121,7 +152,6 @@ export default async function ProfilePage({
 
       {/* ---- Dashboard: left rail + notes ---- */}
       <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
-        {/* Left rail */}
         <aside className="space-y-6">
           {isSelf && (
             <section className="card p-5">
@@ -153,7 +183,9 @@ export default async function ProfilePage({
                         {currentBook.author ?? "Unknown author"}
                       </p>
                       <div className="progress mt-3">
-                        <span style={{ width: `${progress}%` }} />
+                        <span
+                          style={{ width: `${progress}%`, background: accent }}
+                        />
                       </div>
                       <span className="mt-1 block text-xs font-mono text-ink-faint">
                         {progress}% read
@@ -168,17 +200,26 @@ export default async function ProfilePage({
           </section>
 
           <section className="card p-5">
-            <div className="mb-3 flex items-center gap-4 border-b border-parchment-dark">
-              <span className="tab tab-active">Search</span>
-            </div>
-            <BookLookup canSetReading={isSelf} />
+            <h3 className="mb-3 font-display text-lg text-ink">
+              Books Read{" "}
+              <span className="font-mono text-xs text-ink-faint">
+                ({readShelf.length})
+              </span>
+            </h3>
+            <ReadShelf books={readShelf} isSelf={isSelf} />
           </section>
+
+          {isSelf && (
+            <section className="card p-5">
+              <ProfileCustomizer accent={accent} banner={banner} />
+            </section>
+          )}
         </aside>
 
         {/* Notes feed */}
         <section className="space-y-4">
-          <div className="flex items-center gap-4 border-b border-brass/25 pb-1">
-            <span className="tab tab-active">Notes</span>
+          <div className="flex items-center gap-4 border-b-2 pb-1" style={{ borderColor: accent }}>
+            <span className="pb-1 text-sm font-semibold text-ink">Notes</span>
           </div>
           {feed.length === 0 ? (
             <div className="card p-6 text-center">
