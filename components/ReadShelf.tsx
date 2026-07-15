@@ -54,7 +54,7 @@ export function ReadShelf({
       {books.length === 0 ? (
         <p className="text-sm text-ink-faint">
           {isSelf
-            ? "No finished books yet — your shelf will fill up as you read."
+            ? "No finished books yet. Your shelf will fill up as you read."
             : "No finished books yet."}
         </p>
       ) : (
