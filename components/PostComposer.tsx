@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { BookResult } from "@/lib/openlibrary";
 import { createPost, saveDraft, deleteDraft } from "@/app/actions";
 import { postLimit } from "@/lib/constants";
@@ -23,6 +24,7 @@ export type DraftInit = {
 // The core writing surface: attach a book, pick a kind, write within a strict
 // character budget. Can be loaded from — and saved back to — a draft.
 export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
+  const router = useRouter();
   const [book, setBook] = useState<BookResult | null>(initialDraft?.book ?? null);
   // Each kind keeps its own draft text, so switching tabs never overwrites what
   // you wrote for another kind.
@@ -36,6 +38,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
   const [draftId, setDraftId] = useState<string | null>(initialDraft?.id ?? null);
   const [draftMsg, setDraftMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<"post" | "draft" | null>(null);
+  const [confirmDelDraft, setConfirmDelDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -106,6 +109,23 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         setDraftMsg("Draft saved");
       }
       setBusy(null);
+    });
+  }
+
+  function deleteCurrentDraft() {
+    setError(null);
+    setBusy("draft");
+    startTransition(async () => {
+      if (draftId) await deleteDraft(draftId);
+      setBodies({ note: "", quote: "", review: "" });
+      setBook(null);
+      setKind("note");
+      setGenre("");
+      setDraftId(null);
+      setDraftMsg(null);
+      setConfirmDelDraft(false);
+      setBusy(null);
+      router.replace("/");
     });
   }
 
@@ -199,6 +219,34 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
           {draftMsg && (
             <span className="font-mono text-xs text-brass">{draftMsg}</span>
           )}
+          {draftId &&
+            (confirmDelDraft ? (
+              <span className="flex items-center gap-2 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={deleteCurrentDraft}
+                  disabled={pending}
+                  className="text-oxblood hover:text-oxblood-light"
+                >
+                  confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelDraft(false)}
+                  className="text-ink-faint hover:text-ink"
+                >
+                  cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelDraft(true)}
+                className="font-mono text-xs text-ink-faint hover:text-oxblood"
+              >
+                Delete draft
+              </button>
+            ))}
           <button
             type="button"
             onClick={saveCurrentDraft}
