@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { BookCover } from "@/components/BookCover";
 import { FollowButton } from "@/components/FollowButton";
+import type { FollowStatus } from "@/app/actions";
 
 type ReaderRow = {
   id: string;
@@ -31,16 +32,26 @@ export default async function DiscoverPage() {
 
   const { data: readers } = await query;
 
-  let followingSet = new Set<string>();
+  // Map of my follow status per user, plus the set of people I've blocked.
+  const statusByUser = new Map<string, FollowStatus>();
+  let blockedIds = new Set<string>();
   if (user) {
-    const { data: follows } = await supabase
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", user.id);
-    followingSet = new Set((follows ?? []).map((f) => f.following_id));
+    const [{ data: follows }, { data: myBlocks }] = await Promise.all([
+      supabase
+        .from("follows")
+        .select("following_id, status")
+        .eq("follower_id", user.id),
+      supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id),
+    ]);
+    for (const f of follows ?? []) {
+      statusByUser.set(f.following_id, (f.status as FollowStatus) ?? "accepted");
+    }
+    blockedIds = new Set((myBlocks ?? []).map((b) => b.blocked_id));
   }
 
-  const list = (readers ?? []) as unknown as ReaderRow[];
+  const list = ((readers ?? []) as unknown as ReaderRow[]).filter(
+    (r) => !blockedIds.has(r.id)
+  );
 
   return (
     <div className="mx-auto max-w-prose space-y-6">
@@ -80,7 +91,7 @@ export default async function DiscoverPage() {
                 {user && (
                   <FollowButton
                     targetId={r.id}
-                    initialFollowing={followingSet.has(r.id)}
+                    initialStatus={statusByUser.get(r.id) ?? "none"}
                   />
                 )}
               </div>

@@ -227,25 +227,140 @@ export async function clearCurrentlyReading() {
   revalidatePath("/", "layout");
 }
 
-/** Follow / unfollow another user by their profile id. */
-export async function toggleFollow(targetId: string, isFollowing: boolean) {
+export type FollowStatus = "none" | "pending" | "accepted";
+
+/**
+ * Follow a user. A trigger sets the resulting status: "accepted" for public
+ * accounts, "pending" (a follow request) for private ones. Returns the status.
+ */
+export async function followUser(
+  targetId: string
+): Promise<{ status: FollowStatus; error: string | null }> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  if (isFollowing) {
-    await supabase
-      .from("follows")
-      .delete()
-      .eq("follower_id", user.id)
-      .eq("following_id", targetId);
-  } else {
-    await supabase
-      .from("follows")
-      .insert({ follower_id: user.id, following_id: targetId });
-  }
+  const { error } = await supabase
+    .from("follows")
+    .insert({ follower_id: user.id, following_id: targetId });
+  if (error) return { status: "none", error: error.message };
+
+  const { data } = await supabase
+    .from("follows")
+    .select("status")
+    .eq("follower_id", user.id)
+    .eq("following_id", targetId)
+    .maybeSingle();
+
+  revalidatePath("/", "layout");
+  return { status: (data?.status as FollowStatus) ?? "accepted", error: null };
+}
+
+/** Unfollow, or cancel a pending follow request. */
+export async function unfollowUser(targetId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("follows")
+    .delete()
+    .eq("follower_id", user.id)
+    .eq("following_id", targetId);
+  revalidatePath("/", "layout");
+}
+
+/** Approve an incoming follow request (private accounts). */
+export async function acceptFollow(followerId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("follows")
+    .update({ status: "accepted" })
+    .eq("follower_id", followerId)
+    .eq("following_id", user.id);
+  revalidatePath("/", "layout");
+}
+
+/** Decline an incoming follow request (or remove an existing follower). */
+export async function rejectFollow(followerId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("follows")
+    .delete()
+    .eq("follower_id", followerId)
+    .eq("following_id", user.id);
+  revalidatePath("/", "layout");
+}
+
+/** Block a user: removes any follow relationship both ways, then blocks. */
+export async function blockUser(targetId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("follows")
+    .delete()
+    .eq("follower_id", user.id)
+    .eq("following_id", targetId);
+  await supabase
+    .from("follows")
+    .delete()
+    .eq("follower_id", targetId)
+    .eq("following_id", user.id);
+  await supabase
+    .from("blocks")
+    .upsert(
+      { blocker_id: user.id, blocked_id: targetId },
+      { onConflict: "blocker_id,blocked_id", ignoreDuplicates: true }
+    );
+  revalidatePath("/", "layout");
+}
+
+/** Unblock a user. */
+export async function unblockUser(targetId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("blocks")
+    .delete()
+    .eq("blocker_id", user.id)
+    .eq("blocked_id", targetId);
+  revalidatePath("/", "layout");
+}
+
+/** Toggle the current user's account between public and private. */
+export async function setPrivacy(isPrivate: boolean) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("profiles")
+    .update({ is_private: isPrivate })
+    .eq("id", user.id);
   revalidatePath("/", "layout");
 }
 

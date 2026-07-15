@@ -23,14 +23,23 @@ export default async function RootLayout({
 
   let username: string | null = null;
   let displayName: string | null = null;
+  let pendingRequests = 0;
   if (user) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username, display_name")
-      .eq("id", user.id)
-      .single();
+    const [{ data }, { count }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("username, display_name")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("following_id", user.id)
+        .eq("status", "pending"),
+    ]);
     username = data?.username ?? null;
     displayName = data?.display_name ?? data?.username ?? null;
+    pendingRequests = count ?? 0;
   }
 
   return (
@@ -56,6 +65,23 @@ export default async function RootLayout({
                     className="font-medium text-ink-soft hover:text-forest"
                   >
                     Discover
+                  </Link>
+                  <Link
+                    href="/requests"
+                    className="relative font-medium text-ink-soft hover:text-forest"
+                  >
+                    Requests
+                    {pendingRequests > 0 && (
+                      <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-pill bg-oxblood px-1 text-[10px] font-bold text-cream">
+                        {pendingRequests}
+                      </span>
+                    )}
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="font-medium text-ink-soft hover:text-forest"
+                  >
+                    Settings
                   </Link>
                   <form action={signOut}>
                     <button

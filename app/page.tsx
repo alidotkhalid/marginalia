@@ -26,7 +26,8 @@ export default async function FeedPage() {
   const { data: following } = await supabase
     .from("follows")
     .select("following_id")
-    .eq("follower_id", user.id);
+    .eq("follower_id", user.id)
+    .eq("status", "accepted");
 
   const authorIds = [user.id, ...(following?.map((f) => f.following_id) ?? [])];
 
