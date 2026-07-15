@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { BookCover } from "@/components/BookCover";
 import { FollowButton } from "@/components/FollowButton";
+import { PostCard, type FeedPost } from "@/components/PostCard";
 import type { FollowStatus } from "@/app/actions";
+import { GENRES, isGenre, genreLabel } from "@/lib/genres";
 
 type ReaderRow = {
   id: string;
@@ -13,14 +15,87 @@ type ReaderRow = {
   books: { title: string; author: string | null; cover_id: number | null } | null;
 };
 
-// A quiet directory of readers to follow — no ranking, just recently joined
-// members and what they're reading.
-export default async function DiscoverPage() {
+// A row of genre hashtags for browsing. Highlights the active one.
+function GenreChips({ active }: { active: string | null }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {active && (
+        <Link
+          href="/discover"
+          className="rounded-pill border border-parchment-dark px-3 py-1 font-mono text-xs text-cream-soft hover:border-brass"
+        >
+          ✕ clear
+        </Link>
+      )}
+      {GENRES.map((g) => (
+        <Link
+          key={g.slug}
+          href={`/discover?genre=${g.slug}`}
+          className={`rounded-pill border px-3 py-1 font-mono text-xs transition-colors ${
+            active === g.slug
+              ? "border-brass bg-brass/15 text-brass"
+              : "border-parchment-dark text-cream-soft hover:border-brass hover:text-brass"
+          }`}
+        >
+          #{g.slug}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export default async function DiscoverPage({
+  searchParams,
+}: {
+  searchParams: { genre?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const activeGenre =
+    searchParams.genre && isGenre(searchParams.genre) ? searchParams.genre : null;
+
+  // ---- Genre view: posts tagged with the chosen genre ----
+  if (activeGenre) {
+    const { data: posts } = await supabase
+      .from("feed_posts")
+      .select("*")
+      .eq("genre", activeGenre)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    const feed = (posts ?? []) as FeedPost[];
+
+    return (
+      <div className="mx-auto max-w-prose space-y-6">
+        <section>
+          <h1 className="mb-1 font-display text-3xl font-bold text-brass">
+            #{activeGenre}
+          </h1>
+          <p className="text-sm text-cream-soft">
+            Posts about {genreLabel(activeGenre)}.
+          </p>
+        </section>
+
+        <GenreChips active={activeGenre} />
+
+        {feed.length === 0 ? (
+          <div className="card p-6 text-center text-ink-faint">
+            No posts in this genre yet.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {feed.map((post) => (
+              <PostCard key={post.id} post={post} currentUserId={user?.id} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---- Default view: readers directory ----
   let query = supabase
     .from("profiles")
     .select(
@@ -32,15 +107,11 @@ export default async function DiscoverPage() {
 
   const { data: readers } = await query;
 
-  // Map of my follow status per user, plus the set of people I've blocked.
   const statusByUser = new Map<string, FollowStatus>();
   let blockedIds = new Set<string>();
   if (user) {
     const [{ data: follows }, { data: myBlocks }] = await Promise.all([
-      supabase
-        .from("follows")
-        .select("following_id, status")
-        .eq("follower_id", user.id),
+      supabase.from("follows").select("following_id, status").eq("follower_id", user.id),
       supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id),
     ]);
     for (const f of follows ?? []) {
@@ -57,12 +128,16 @@ export default async function DiscoverPage() {
     <div className="mx-auto max-w-prose space-y-6">
       <section>
         <h1 className="mb-1 font-display text-3xl font-bold text-cream">
-          Find readers
+          Discover
         </h1>
         <p className="text-sm text-cream-soft">
-          Follow people whose reading you&rsquo;d like on your feed.
+          Browse posts by genre, or find readers to follow.
         </p>
       </section>
+
+      <GenreChips active={null} />
+
+      <hr className="rule" />
 
       {list.length === 0 ? (
         <div className="card p-6 text-center text-ink-faint">

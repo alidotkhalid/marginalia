@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { BookResult } from "@/lib/openlibrary";
 import { postLimit } from "@/lib/constants";
+import { isGenre } from "@/lib/genres";
+import type { CommentRow } from "@/lib/comments";
 
 /**
  * Cache a book row (de-duplicated on Open Library id) and return its uuid.
@@ -53,6 +55,8 @@ export async function createPost(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   const kindRaw = String(formData.get("kind") ?? "note");
   const kind = ["note", "quote", "review"].includes(kindRaw) ? kindRaw : "note";
+  const genreRaw = String(formData.get("genre") ?? "");
+  const genre = isGenre(genreRaw) ? genreRaw : null;
   const bookRaw = formData.get("book");
 
   if (!body) return { error: "Write something first." };
@@ -74,12 +78,58 @@ export async function createPost(formData: FormData) {
     book_id: bookId,
     body,
     kind,
+    genre,
   });
 
   if (error) return { error: error.message };
 
   revalidatePath("/");
   return { error: null };
+}
+
+/** Fetch the comments for a post (author info joined). */
+export async function getComments(postId: string): Promise<CommentRow[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("comments")
+    .select(
+      "id, body, created_at, author_id, author:profiles!author_id (username, display_name)"
+    )
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+  return (data ?? []) as unknown as CommentRow[];
+}
+
+/** Add a comment to a post. */
+export async function addComment(postId: string, body: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const text = body.trim().slice(0, 500);
+  if (!text) return { error: "Write something first." };
+
+  const { error } = await supabase
+    .from("comments")
+    .insert({ post_id: postId, author_id: user.id, body: text });
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Delete a comment (your own, or one on your post). RLS enforces this. */
+export async function deleteComment(commentId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase.from("comments").delete().eq("id", commentId);
+  revalidatePath("/", "layout");
 }
 
 /** Set the current user's "Currently Reading" book. */

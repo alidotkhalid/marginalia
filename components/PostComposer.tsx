@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { BookResult } from "@/lib/openlibrary";
 import { createPost } from "@/app/actions";
 import { postLimit } from "@/lib/constants";
+import { GENRES } from "@/lib/genres";
 import { BookSearch } from "./BookSearch";
 import { BookCover } from "./BookCover";
 import { Spinner } from "./Spinner";
@@ -16,6 +17,7 @@ export function PostComposer() {
   const [book, setBook] = useState<BookResult | null>(null);
   const [body, setBody] = useState("");
   const [kind, setKind] = useState<Kind>("note");
+  const [genre, setGenre] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -32,6 +34,7 @@ export function PostComposer() {
     }
     formData.set("book", JSON.stringify(book));
     formData.set("kind", kind);
+    formData.set("genre", genre);
     startTransition(async () => {
       const res = await createPost(formData);
       if (res?.error) {
@@ -40,6 +43,7 @@ export function PostComposer() {
         setBody("");
         setBook(null);
         setKind("note");
+        setGenre("");
       }
     });
   }
@@ -89,7 +93,7 @@ export function PostComposer() {
       />
 
       {/* Kind selector — note / quote / review */}
-      <div className="mt-2 flex gap-1.5 font-mono text-[11px] uppercase tracking-wider">
+      <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider">
         {(["note", "quote", "review"] as Kind[]).map((k) => (
           <button
             key={k}
@@ -104,6 +108,21 @@ export function PostComposer() {
             {k}
           </button>
         ))}
+
+        {/* Genre dropdown — becomes a clickable hashtag on the post */}
+        <select
+          value={genre}
+          onChange={(e) => setGenre(e.target.value)}
+          className="ml-auto rounded-pill border border-parchment-dark bg-parchment-light px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-ink focus:border-brass focus:outline-none"
+          aria-label="Genre"
+        >
+          <option value="">＋ genre</option>
+          {GENRES.map((g) => (
+            <option key={g.slug} value={g.slug}>
+              {g.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="mt-3 flex items-center justify-between">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookCover } from "./BookCover";
 import { Avatar } from "./Avatar";
+import { Comments } from "./Comments";
 
 export type FeedPost = {
   id: string;
@@ -12,6 +13,8 @@ export type FeedPost = {
   book_title: string | null;
   book_author: string | null;
   book_cover_id: number | null;
+  genre: string | null;
+  comment_count: number;
 };
 
 function timeAgo(iso: string) {
@@ -30,9 +33,15 @@ function timeAgo(iso: string) {
   });
 }
 
-// A single reading note, styled like an index card. Quotes get a left rule
-// and italic treatment; reviews/notes read as plain body copy.
-export function PostCard({ post }: { post: FeedPost }) {
+// A single reading note, styled like an index card. Quotes get a left rule and
+// italic treatment; the genre shows as a clickable hashtag; comments expand below.
+export function PostCard({
+  post,
+  currentUserId,
+}: {
+  post: FeedPost;
+  currentUserId?: string;
+}) {
   return (
     <article className="card p-5">
       <header className="mb-3 flex items-center gap-3">
@@ -65,21 +74,32 @@ export function PostCard({ post }: { post: FeedPost }) {
         <p className="whitespace-pre-wrap leading-relaxed text-ink">{post.body}</p>
       )}
 
+      {post.genre && (
+        <Link
+          href={`/discover?genre=${post.genre}`}
+          className="mt-2 inline-block font-mono text-sm text-brass hover:text-brass-light"
+        >
+          #{post.genre}
+        </Link>
+      )}
+
       {post.book_title && (
-        <footer className="mt-3 flex items-center gap-3 border-t border-parchment-dark pt-3">
-          <BookCover
-            coverId={post.book_cover_id}
-            title={post.book_title}
-            size="S"
-          />
+        <div className="mt-3 flex items-center gap-3 border-t border-parchment-dark pt-3">
+          <BookCover coverId={post.book_cover_id} title={post.book_title} size="S" />
           <div className="min-w-0 text-sm">
             <p className="truncate font-display text-ink-soft">{post.book_title}</p>
             <p className="truncate text-ink-faint">
               {post.book_author ?? "Unknown author"}
             </p>
           </div>
-        </footer>
+        </div>
       )}
+
+      <Comments
+        postId={post.id}
+        count={post.comment_count ?? 0}
+        currentUserId={currentUserId}
+      />
     </article>
   );
 }

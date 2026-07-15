@@ -67,6 +67,8 @@ create table if not exists public.posts (
   -- Optional label so the feed can distinguish a quote from a thought/review.
   kind         text not null default 'note'
                  check (kind in ('note', 'quote', 'review')),
+  -- Genre tag (slug from the app's genre list), used for hashtag browsing.
+  genre        text,
   created_at   timestamptz not null default now()
 );
 
@@ -103,6 +105,20 @@ create table if not exists public.read_books (
 create index if not exists read_books_user_idx
   on public.read_books (user_id, finished_at desc);
 
+-- ----------------------------------------------------------------------------
+-- 6. COMMENTS — short replies on a post.
+-- ----------------------------------------------------------------------------
+create table if not exists public.comments (
+  id          uuid primary key default gen_random_uuid(),
+  post_id     uuid not null references public.posts (id) on delete cascade,
+  author_id   uuid not null references public.profiles (id) on delete cascade,
+  body        text not null check (char_length(body) between 1 and 500),
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists comments_post_idx
+  on public.comments (post_id, created_at);
+
 -- ============================================================================
 -- ROW LEVEL SECURITY
 -- Everything is locked down by default; policies grant the minimum needed.
@@ -112,6 +128,7 @@ alter table public.books      enable row level security;
 alter table public.posts      enable row level security;
 alter table public.follows    enable row level security;
 alter table public.read_books enable row level security;
+alter table public.comments   enable row level security;
 
 -- PROFILES ------------------------------------------------------------------
 -- Profiles are public (needed to render feeds & profile pages).
@@ -166,6 +183,28 @@ create policy "users add to their own shelf"
 create policy "users remove from their own shelf"
   on public.read_books for delete using (auth.uid() = user_id);
 
+-- COMMENTS ------------------------------------------------------------------
+-- Visible iff the underlying post is visible (posts RLS filters the subquery).
+create policy "comments visible with their post"
+  on public.comments for select using (
+    exists (select 1 from public.posts p where p.id = comments.post_id)
+  );
+
+create policy "users comment on visible posts"
+  on public.comments for insert to authenticated with check (
+    auth.uid() = author_id
+    and exists (select 1 from public.posts p where p.id = post_id)
+  );
+
+create policy "authors delete own or on their post"
+  on public.comments for delete using (
+    auth.uid() = author_id
+    or exists (
+      select 1 from public.posts p
+      where p.id = comments.post_id and p.author_id = auth.uid()
+    )
+  );
+
 -- ============================================================================
 -- TRIGGER: auto-create a profile row when a new auth user signs up.
 -- The username is passed through auth `raw_user_meta_data.username` at signup.
@@ -213,7 +252,9 @@ with (security_invoker = true) as
     b.olid             as book_olid,
     b.title            as book_title,
     b.author           as book_author,
-    b.cover_id         as book_cover_id
+    b.cover_id         as book_cover_id,
+    p.genre,
+    (select count(*) from public.comments c where c.post_id = p.id)::int as comment_count
   from public.posts p
   join public.profiles prof on prof.id = p.author_id
   left join public.books b   on b.id = p.book_id
