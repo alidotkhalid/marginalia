@@ -2,11 +2,12 @@ import Link from "next/link";
 import { BookCover } from "./BookCover";
 import { Avatar } from "./Avatar";
 import { Comments } from "./Comments";
-import { PostBody } from "./PostBody";
+import { PostContent } from "./PostContent";
 
 export type FeedPost = {
   id: string;
   created_at: string;
+  author_id: string;
   author_username: string;
   author_display_name: string | null;
   book_title: string | null;
@@ -63,20 +64,14 @@ export function PostCard({
         </div>
       </header>
 
-      <PostBody
+      <PostContent
+        postId={post.id}
         note={post.text_note}
         quote={post.text_quote}
         review={post.text_review}
+        genre={post.genre}
+        isOwner={!!currentUserId && currentUserId === post.author_id}
       />
-
-      {post.genre && (
-        <Link
-          href={`/discover?genre=${post.genre}`}
-          className="mt-2 inline-block font-mono text-sm text-brass hover:text-brass-light"
-        >
-          #{post.genre}
-        </Link>
-      )}
 
       {post.book_title && (
         <div className="mt-3 flex items-center gap-3 border-t border-parchment-dark pt-3">

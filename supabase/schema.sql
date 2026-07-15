@@ -164,6 +164,10 @@ create policy "users can create their own posts"
   on public.posts for insert to authenticated
   with check (auth.uid() = author_id);
 
+create policy "users update their own posts"
+  on public.posts for update
+  using (auth.uid() = author_id) with check (auth.uid() = author_id);
+
 create policy "users can delete their own posts"
   on public.posts for delete using (auth.uid() = author_id);
 

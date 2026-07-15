@@ -100,6 +100,61 @@ export async function createPost(formData: FormData) {
   return { error: null };
 }
 
+/** Edit one of your own posts (its three sections + genre). RLS enforces owner. */
+export async function updatePost(
+  postId: string,
+  sections: { note: string; quote: string; review: string; genre: string }
+) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const note = sections.note.trim() || null;
+  const quote = sections.quote.trim() || null;
+  const review = sections.review.trim() || null;
+  const genre = isGenre(sections.genre) ? sections.genre : null;
+
+  if (!note && !quote && !review) return { error: "Write something first." };
+  if (note && note.length > postLimit("note"))
+    return { error: `Keep your note under ${postLimit("note")} characters.` };
+  if (quote && quote.length > postLimit("quote"))
+    return { error: `Keep your quote under ${postLimit("quote")} characters.` };
+  if (review && review.length > postLimit("review"))
+    return { error: `Keep your review under ${postLimit("review")} characters.` };
+
+  const primaryKind = note ? "note" : quote ? "quote" : "review";
+  const { error } = await supabase
+    .from("posts")
+    .update({
+      text_note: note,
+      text_quote: quote,
+      text_review: review,
+      genre,
+      kind: primaryKind,
+      body: note ?? quote ?? review,
+    })
+    .eq("id", postId)
+    .eq("author_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Delete one of your own posts (its comments cascade). RLS enforces owner. */
+export async function deletePost(postId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase.from("posts").delete().eq("id", postId).eq("author_id", user.id);
+  revalidatePath("/", "layout");
+}
+
 /** Fetch the comments for a post (author info joined). */
 export async function getComments(postId: string): Promise<CommentRow[]> {
   const supabase = createClient();
