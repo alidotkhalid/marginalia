@@ -15,11 +15,21 @@ type Kind = "note" | "quote" | "review";
 // character budget. The counter turns oxblood as you approach the limit.
 export function PostComposer() {
   const [book, setBook] = useState<BookResult | null>(null);
-  const [body, setBody] = useState("");
+  // Each kind keeps its own draft text, so switching tabs never overwrites what
+  // you wrote for another kind.
+  const [bodies, setBodies] = useState<Record<Kind, string>>({
+    note: "",
+    quote: "",
+    review: "",
+  });
   const [kind, setKind] = useState<Kind>("note");
   const [genre, setGenre] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const body = bodies[kind];
+  const setBody = (val: string) =>
+    setBodies((prev) => ({ ...prev, [kind]: val }));
 
   const limit = postLimit(kind);
   const remaining = limit - body.length;
@@ -40,7 +50,7 @@ export function PostComposer() {
       if (res?.error) {
         setError(res.error);
       } else {
-        setBody("");
+        setBodies({ note: "", quote: "", review: "" });
         setBook(null);
         setKind("note");
         setGenre("");
