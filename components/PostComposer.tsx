@@ -37,7 +37,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
   const [genre, setGenre] = useState(initialDraft?.genre ?? "");
   const [draftId, setDraftId] = useState<string | null>(initialDraft?.id ?? null);
   const [draftMsg, setDraftMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"post" | "draft" | null>(null);
+  const [busy, setBusy] = useState<"post" | "draft" | "delete" | null>(null);
   const [confirmDelDraft, setConfirmDelDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -114,7 +114,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
 
   function deleteCurrentDraft() {
     setError(null);
-    setBusy("draft");
+    setBusy("delete");
     startTransition(async () => {
       if (draftId) await deleteDraft(draftId);
       setBodies({ note: "", quote: "", review: "" });
@@ -228,7 +228,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
                   disabled={pending}
                   className="text-oxblood hover:text-oxblood-light"
                 >
-                  confirm
+                  {busy === "delete" ? "deleting…" : "confirm"}
                 </button>
                 <button
                   type="button"
