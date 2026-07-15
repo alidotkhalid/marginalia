@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PostComposer } from "@/components/PostComposer";
+import { PostComposer, type DraftInit } from "@/components/PostComposer";
 import { PostCard, type FeedPost } from "@/components/PostCard";
+import type { BookResult } from "@/lib/openlibrary";
 
 // The Feed — a strictly chronological timeline of notes from people you follow
 // (plus your own). No ranking, no recommendations, no infinite scroll.
-export default async function FeedPage() {
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: { draft?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -21,6 +26,36 @@ export default async function FeedPage() {
         to read your feed.
       </p>
     );
+  }
+
+  // If ?draft=id is present, load that draft into the composer.
+  let initialDraft: DraftInit | undefined;
+  if (searchParams.draft) {
+    const { data: d } = await supabase
+      .from("drafts")
+      .select("*")
+      .eq("id", searchParams.draft)
+      .eq("author_id", user.id)
+      .maybeSingle();
+    if (d) {
+      const book: BookResult | null = d.book_olid
+        ? {
+            olid: d.book_olid as string,
+            title: (d.book_title as string) ?? "",
+            author: (d.book_author as string | null) ?? null,
+            coverId: (d.book_cover_id as number | null) ?? null,
+            firstYear: null,
+          }
+        : null;
+      initialDraft = {
+        id: d.id as string,
+        note: (d.text_note as string | null) ?? "",
+        quote: (d.text_quote as string | null) ?? "",
+        review: (d.text_review as string | null) ?? "",
+        genre: (d.genre as string | null) ?? "",
+        book,
+      };
+    }
   }
 
   const { data: following } = await supabase
@@ -50,7 +85,7 @@ export default async function FeedPage() {
           A quiet, chronological record of what your circle is reading.
         </p>
         <div className="card p-5">
-          <PostComposer />
+          <PostComposer initialDraft={initialDraft} />
         </div>
       </section>
 

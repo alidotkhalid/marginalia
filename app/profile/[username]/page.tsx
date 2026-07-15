@@ -8,6 +8,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { BlockButton } from "@/components/BlockButton";
 import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
 import { EditableName } from "@/components/EditableName";
+import { EditableBio } from "@/components/EditableBio";
 import { ReadShelf, type ReadBook } from "@/components/ReadShelf";
 import { bannerBackground } from "@/lib/theme";
 import type { FollowStatus } from "@/app/actions";
@@ -191,8 +192,12 @@ export default async function ProfilePage({
             </div>
           </div>
 
-          {profile.bio && (
-            <p className="mt-4 max-w-prose text-ink-soft">{profile.bio}</p>
+          {isSelf ? (
+            <EditableBio current={(profile.bio as string | null) ?? null} />
+          ) : (
+            profile.bio && (
+              <p className="mt-4 max-w-prose text-ink-soft">{profile.bio}</p>
+            )
           )}
         </div>
       </header>

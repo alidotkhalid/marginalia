@@ -50,6 +50,14 @@ export default async function SettingsPage() {
         </div>
       </section>
 
+      {/* Content */}
+      <section className="card p-5">
+        <h2 className="mb-4 font-display text-xl text-ink">Your content</h2>
+        <Link href="/drafts" className="link text-sm">
+          Saved drafts →
+        </Link>
+      </section>
+
       {/* Blocked users */}
       <section className="card p-5">
         <h2 className="mb-4 font-display text-xl text-ink">Blocked users</h2>

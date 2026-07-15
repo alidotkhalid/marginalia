@@ -155,6 +155,72 @@ export async function deletePost(postId: string) {
   revalidatePath("/", "layout");
 }
 
+/** Create or update a draft. Returns the draft id. */
+export async function saveDraft(input: {
+  id?: string;
+  note: string;
+  quote: string;
+  review: string;
+  genre: string;
+  book: BookResult | null;
+}): Promise<{ error: string | null; id: string | null }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const note = input.note.trim() || null;
+  const quote = input.quote.trim() || null;
+  const review = input.review.trim() || null;
+  if (!note && !quote && !review && !input.book)
+    return { error: "Nothing to save yet.", id: input.id ?? null };
+
+  const row = {
+    author_id: user.id,
+    text_note: note,
+    text_quote: quote,
+    text_review: review,
+    genre: isGenre(input.genre) ? input.genre : null,
+    book_olid: input.book?.olid ?? null,
+    book_title: input.book?.title ?? null,
+    book_author: input.book?.author ?? null,
+    book_cover_id: input.book?.coverId ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase
+      .from("drafts")
+      .update(row)
+      .eq("id", input.id)
+      .eq("author_id", user.id);
+    revalidatePath("/drafts");
+    return { error: error?.message ?? null, id: input.id };
+  }
+
+  const { data, error } = await supabase
+    .from("drafts")
+    .insert(row)
+    .select("id")
+    .single();
+  revalidatePath("/drafts");
+  if (error) return { error: error.message, id: null };
+  return { error: null, id: data.id as string };
+}
+
+/** Delete a draft. */
+export async function deleteDraft(draftId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase.from("drafts").delete().eq("id", draftId).eq("author_id", user.id);
+  revalidatePath("/drafts");
+}
+
 /** Fetch the comments for a post (author info joined). */
 export async function getComments(postId: string): Promise<CommentRow[]> {
   const supabase = createClient();
@@ -273,6 +339,23 @@ export async function updateDisplayName(formData: FormData) {
   if (!name) return { error: "Your name can't be empty." };
 
   await supabase.from("profiles").update({ display_name: name }).eq("id", user.id);
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Update the reader's bio (up to 280 characters; empty clears it). */
+export async function updateBio(formData: FormData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const bio = String(formData.get("bio") ?? "").trim().slice(0, 280);
+  await supabase
+    .from("profiles")
+    .update({ bio: bio.length ? bio : null })
+    .eq("id", user.id);
   revalidatePath("/", "layout");
   return { error: null };
 }

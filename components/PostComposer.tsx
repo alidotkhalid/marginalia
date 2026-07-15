@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { BookResult } from "@/lib/openlibrary";
-import { createPost } from "@/app/actions";
+import { createPost, saveDraft, deleteDraft } from "@/app/actions";
 import { postLimit } from "@/lib/constants";
 import { GENRES } from "@/lib/genres";
 import { BookSearch } from "./BookSearch";
@@ -11,19 +11,30 @@ import { Spinner } from "./Spinner";
 
 type Kind = "note" | "quote" | "review";
 
+export type DraftInit = {
+  id: string;
+  note: string;
+  quote: string;
+  review: string;
+  genre: string;
+  book: BookResult | null;
+};
+
 // The core writing surface: attach a book, pick a kind, write within a strict
-// character budget. The counter turns oxblood as you approach the limit.
-export function PostComposer() {
-  const [book, setBook] = useState<BookResult | null>(null);
+// character budget. Can be loaded from — and saved back to — a draft.
+export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
+  const [book, setBook] = useState<BookResult | null>(initialDraft?.book ?? null);
   // Each kind keeps its own draft text, so switching tabs never overwrites what
   // you wrote for another kind.
   const [bodies, setBodies] = useState<Record<Kind, string>>({
-    note: "",
-    quote: "",
-    review: "",
+    note: initialDraft?.note ?? "",
+    quote: initialDraft?.quote ?? "",
+    review: initialDraft?.review ?? "",
   });
   const [kind, setKind] = useState<Kind>("note");
-  const [genre, setGenre] = useState("");
+  const [genre, setGenre] = useState(initialDraft?.genre ?? "");
+  const [draftId, setDraftId] = useState<string | null>(initialDraft?.id ?? null);
+  const [draftMsg, setDraftMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -62,10 +73,33 @@ export function PostComposer() {
       if (res?.error) {
         setError(res.error);
       } else {
+        if (draftId) await deleteDraft(draftId);
         setBodies({ note: "", quote: "", review: "" });
         setBook(null);
         setKind("note");
         setGenre("");
+        setDraftId(null);
+        setDraftMsg(null);
+      }
+    });
+  }
+
+  function saveCurrentDraft() {
+    setError(null);
+    setDraftMsg(null);
+    startTransition(async () => {
+      const res = await saveDraft({
+        id: draftId ?? undefined,
+        note: bodies.note,
+        quote: bodies.quote,
+        review: bodies.review,
+        genre,
+        book,
+      });
+      if (res.error) setError(res.error);
+      else {
+        setDraftId(res.id);
+        setDraftMsg("Draft saved");
       }
     });
   }
@@ -156,10 +190,23 @@ export function PostComposer() {
         >
           {remaining} left
         </span>
-        <button type="submit" className="btn-accent" disabled={!canSubmit || pending}>
-          {pending && <Spinner inline />}
-          {pending ? "Posting…" : "Post"}
-        </button>
+        <div className="flex items-center gap-2">
+          {draftMsg && (
+            <span className="font-mono text-xs text-brass">{draftMsg}</span>
+          )}
+          <button
+            type="button"
+            onClick={saveCurrentDraft}
+            disabled={pending || (!anyText && !book)}
+            className="btn-ghost !py-2 text-sm"
+          >
+            Save draft
+          </button>
+          <button type="submit" className="btn-accent" disabled={!canSubmit || pending}>
+            {pending && <Spinner inline />}
+            {pending ? "Posting…" : "Post"}
+          </button>
+        </div>
       </div>
 
       {error && <p className="mt-2 text-sm text-oxblood">{error}</p>}
