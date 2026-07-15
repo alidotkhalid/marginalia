@@ -489,3 +489,21 @@ export async function signOut() {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+/**
+ * Permanently delete the current user's account and all their data (via DB
+ * cascade), then sign out. Backed by the delete_current_user() SQL function.
+ */
+export async function deleteAccount() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase.rpc("delete_current_user");
+  if (error) return { error: error.message };
+
+  await supabase.auth.signOut();
+  redirect("/signup");
+}

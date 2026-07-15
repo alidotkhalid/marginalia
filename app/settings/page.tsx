@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { PrivacyToggle } from "@/components/PrivacyToggle";
 import { BlockButton } from "@/components/BlockButton";
+import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 
 type BlockRow = {
   blocked_id: string;
@@ -78,6 +79,15 @@ export default async function SettingsPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Danger zone */}
+      <section className="card border-oxblood/40 p-5">
+        <h2 className="mb-1 font-display text-xl text-oxblood">Danger zone</h2>
+        <p className="mb-4 text-sm text-ink-faint">
+          Deleting your account is permanent and cannot be undone.
+        </p>
+        <DeleteAccountButton />
       </section>
     </div>
   );
