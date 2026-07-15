@@ -34,16 +34,28 @@ export function PostComposer() {
   const limit = postLimit(kind);
   const remaining = limit - body.length;
   const nearLimit = remaining <= 40;
-  const canSubmit = book !== null && body.trim().length > 0 && remaining >= 0;
+
+  const anyText = !!(
+    bodies.note.trim() ||
+    bodies.quote.trim() ||
+    bodies.review.trim()
+  );
+  const withinLimits =
+    bodies.note.length <= postLimit("note") &&
+    bodies.quote.length <= postLimit("quote") &&
+    bodies.review.length <= postLimit("review");
+  const canSubmit = book !== null && anyText && withinLimits;
 
   function handleSubmit(formData: FormData) {
     setError(null);
     if (!book) {
-      setError("Attach a book to your note.");
+      setError("Attach a book to your post.");
       return;
     }
     formData.set("book", JSON.stringify(book));
-    formData.set("kind", kind);
+    formData.set("text_note", bodies.note);
+    formData.set("text_quote", bodies.quote);
+    formData.set("text_review", bodies.review);
     formData.set("genre", genre);
     startTransition(async () => {
       const res = await createPost(formData);
@@ -116,6 +128,7 @@ export function PostComposer() {
             }`}
           >
             {k}
+            {bodies[k].trim() && <span className="ml-1 text-brass">•</span>}
           </button>
         ))}
 

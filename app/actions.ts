@@ -42,8 +42,9 @@ async function upsertBook(
 }
 
 /**
- * Create a reading note. `book` is the JSON-serialized BookResult chosen in the
- * composer's book search. `body` is the character-limited text.
+ * Create a post. A post can carry up to three text sections — note, quote,
+ * review — each drawn from the composer's tabs. `book` is the JSON-serialized
+ * BookResult. At least one section must be non-empty.
  */
 export async function createPost(formData: FormData) {
   const supabase = createClient();
@@ -52,18 +53,25 @@ export async function createPost(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const body = String(formData.get("body") ?? "").trim();
-  const kindRaw = String(formData.get("kind") ?? "note");
-  const kind = ["note", "quote", "review"].includes(kindRaw) ? kindRaw : "note";
+  const clean = (v: FormDataEntryValue | null) => {
+    const s = String(v ?? "").trim();
+    return s.length ? s : null;
+  };
+  const note = clean(formData.get("text_note"));
+  const quote = clean(formData.get("text_quote"));
+  const review = clean(formData.get("text_review"));
   const genreRaw = String(formData.get("genre") ?? "");
   const genre = isGenre(genreRaw) ? genreRaw : null;
   const bookRaw = formData.get("book");
 
-  if (!body) return { error: "Write something first." };
-  const limit = postLimit(kind);
-  if (body.length > limit)
-    return { error: `Keep your ${kind} under ${limit} characters.` };
-  if (!bookRaw) return { error: "Attach a book to your note." };
+  if (!note && !quote && !review) return { error: "Write something first." };
+  if (note && note.length > postLimit("note"))
+    return { error: `Keep your note under ${postLimit("note")} characters.` };
+  if (quote && quote.length > postLimit("quote"))
+    return { error: `Keep your quote under ${postLimit("quote")} characters.` };
+  if (review && review.length > postLimit("review"))
+    return { error: `Keep your review under ${postLimit("review")} characters.` };
+  if (!bookRaw) return { error: "Attach a book to your post." };
 
   let bookId: string;
   try {
@@ -73,12 +81,17 @@ export async function createPost(formData: FormData) {
     return { error: "That book could not be attached. Try again." };
   }
 
+  // The primary (first non-empty) section fills the legacy body/kind columns.
+  const primaryKind = note ? "note" : quote ? "quote" : "review";
   const { error } = await supabase.from("posts").insert({
     author_id: user.id,
     book_id: bookId,
-    body,
-    kind,
     genre,
+    kind: primaryKind,
+    body: note ?? quote ?? review,
+    text_note: note,
+    text_quote: quote,
+    text_review: review,
   });
 
   if (error) return { error: error.message };

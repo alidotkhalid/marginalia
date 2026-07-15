@@ -2,11 +2,10 @@ import Link from "next/link";
 import { BookCover } from "./BookCover";
 import { Avatar } from "./Avatar";
 import { Comments } from "./Comments";
+import { PostBody } from "./PostBody";
 
 export type FeedPost = {
   id: string;
-  body: string;
-  kind: "note" | "quote" | "review";
   created_at: string;
   author_username: string;
   author_display_name: string | null;
@@ -15,6 +14,9 @@ export type FeedPost = {
   book_cover_id: number | null;
   genre: string | null;
   comment_count: number;
+  text_note: string | null;
+  text_quote: string | null;
+  text_review: string | null;
 };
 
 function timeAgo(iso: string) {
@@ -59,20 +61,13 @@ export function PostCard({
             @{post.author_username} · {timeAgo(post.created_at)}
           </p>
         </div>
-        {post.kind !== "note" && (
-          <span className="rounded-pill border border-brass/40 bg-brass/10 px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider text-brass-dark">
-            {post.kind}
-          </span>
-        )}
       </header>
 
-      {post.kind === "quote" ? (
-        <blockquote className="border-l-2 border-brass pl-3 font-display text-lg italic leading-relaxed text-ink-soft">
-          {post.body}
-        </blockquote>
-      ) : (
-        <p className="whitespace-pre-wrap leading-relaxed text-ink">{post.body}</p>
-      )}
+      <PostBody
+        note={post.text_note}
+        quote={post.text_quote}
+        review={post.text_review}
+      />
 
       {post.genre && (
         <Link
