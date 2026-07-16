@@ -5,6 +5,7 @@ import { Comments } from "./Comments";
 import { PostContent } from "./PostContent";
 import { FollowButton } from "./FollowButton";
 import { LikeButton } from "./LikeButton";
+import { SaveButton } from "./SaveButton";
 import type { FollowStatus } from "@/app/actions";
 
 export type FeedPost = {
@@ -26,6 +27,7 @@ export type FeedPost = {
   answer_asker: string | null;
   like_count: number;
   liked_by_me: boolean;
+  saved_by_me: boolean;
 };
 
 function timeAgo(iso: string) {
@@ -135,12 +137,19 @@ export function PostCard({
         count={post.comment_count ?? 0}
         currentUserId={currentUserId}
         actions={
-          <LikeButton
-            postId={post.id}
-            initialLiked={!!post.liked_by_me}
-            initialCount={post.like_count ?? 0}
-            canLike={!!currentUserId}
-          />
+          <>
+            <LikeButton
+              postId={post.id}
+              initialLiked={!!post.liked_by_me}
+              initialCount={post.like_count ?? 0}
+              canLike={!!currentUserId}
+            />
+            <SaveButton
+              postId={post.id}
+              initialSaved={!!post.saved_by_me}
+              canSave={!!currentUserId}
+            />
+          </>
         }
       />
     </article>

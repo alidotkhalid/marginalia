@@ -747,6 +747,31 @@ export async function setLike(postId: string, like: boolean) {
   revalidatePath("/", "layout");
 }
 
+/** Save (bookmark) or unsave a read. */
+export async function setSave(postId: string, save: boolean) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  if (save) {
+    await supabase
+      .from("saves")
+      .upsert(
+        { post_id: postId, user_id: user.id },
+        { onConflict: "post_id,user_id", ignoreDuplicates: true }
+      );
+  } else {
+    await supabase
+      .from("saves")
+      .delete()
+      .eq("post_id", postId)
+      .eq("user_id", user.id);
+  }
+  revalidatePath("/", "layout");
+}
+
 /** Dismiss (delete) an ask without answering. */
 export async function dismissAsk(askId: string) {
   const supabase = createClient();

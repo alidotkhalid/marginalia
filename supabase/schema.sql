@@ -322,6 +322,27 @@ create policy "users unlike on their own behalf"
   on public.likes for delete using (auth.uid() = user_id);
 
 -- ============================================================================
+-- SAVES — private bookmarks of reads.
+-- ============================================================================
+create table if not exists public.saves (
+  post_id     uuid not null references public.posts (id) on delete cascade,
+  user_id     uuid not null references public.profiles (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+create index if not exists saves_user_idx on public.saves (user_id, created_at desc);
+
+alter table public.saves enable row level security;
+
+create policy "owners see their saves"
+  on public.saves for select using (auth.uid() = user_id);
+create policy "owners save on their own behalf"
+  on public.saves for insert to authenticated with check (auth.uid() = user_id);
+create policy "owners unsave on their own behalf"
+  on public.saves for delete using (auth.uid() = user_id);
+
+-- ============================================================================
 -- COMMENT_VOTES — upvote/downvote on comments.
 -- ============================================================================
 create table if not exists public.comment_votes (
@@ -427,7 +448,11 @@ with (security_invoker = true) as
     exists (
       select 1 from public.likes lk
       where lk.post_id = p.id and lk.user_id = auth.uid()
-    ) as liked_by_me
+    ) as liked_by_me,
+    exists (
+      select 1 from public.saves sv
+      where sv.post_id = p.id and sv.user_id = auth.uid()
+    ) as saved_by_me
   from public.posts p
   join public.profiles prof on prof.id = p.author_id
   left join public.books b   on b.id = p.book_id
