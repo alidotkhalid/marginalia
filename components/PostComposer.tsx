@@ -192,19 +192,24 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         ))}
 
         {/* Genre dropdown — becomes a clickable hashtag on the post */}
-        <select
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
-          className="ml-auto rounded-pill border border-parchment-dark bg-parchment-light px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-ink focus:border-brass focus:outline-none"
-          aria-label="Genre"
-        >
-          <option value="">＋ genre</option>
-          {GENRES.map((g) => (
-            <option key={g.slug} value={g.slug}>
-              {g.label}
-            </option>
-          ))}
-        </select>
+        <span className="relative ml-auto inline-flex items-center">
+          <select
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+            className="appearance-none rounded-pill border border-parchment-dark bg-parchment-light py-1 pl-3 pr-7 font-mono text-[11px] uppercase tracking-wider text-ink focus:border-brass focus:outline-none"
+            aria-label="Genre"
+          >
+            <option value="">+ genre</option>
+            {GENRES.map((g) => (
+              <option key={g.slug} value={g.slug}>
+                {g.label}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-2.5 text-[9px] text-ink-faint">
+            ▼
+          </span>
+        </span>
       </div>
 
       <div className="mt-3 flex items-center justify-between">

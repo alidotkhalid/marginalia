@@ -82,18 +82,23 @@ export function PostContent({
           </div>
         ))}
 
-        <select
-          value={g}
-          onChange={(e) => setG(e.target.value)}
-          className="rounded-pill border border-parchment-dark bg-parchment-light px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-ink focus:border-brass focus:outline-none"
-        >
-          <option value="">＋ genre</option>
-          {GENRES.map((genreItem) => (
-            <option key={genreItem.slug} value={genreItem.slug}>
-              {genreItem.label}
-            </option>
-          ))}
-        </select>
+        <span className="relative inline-flex items-center">
+          <select
+            value={g}
+            onChange={(e) => setG(e.target.value)}
+            className="appearance-none rounded-pill border border-parchment-dark bg-parchment-light py-1 pl-3 pr-7 font-mono text-[11px] uppercase tracking-wider text-ink focus:border-brass focus:outline-none"
+          >
+            <option value="">+ genre</option>
+            {GENRES.map((genreItem) => (
+              <option key={genreItem.slug} value={genreItem.slug}>
+                {genreItem.label}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-2.5 text-[9px] text-ink-faint">
+            ▼
+          </span>
+        </span>
 
         {error && <p className="text-sm text-oxblood">{error}</p>}
 
