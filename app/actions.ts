@@ -644,6 +644,152 @@ export async function signOut() {
   redirect("/login");
 }
 
+// ---------------------------------------------------------------------------
+// Live reading rooms
+// ---------------------------------------------------------------------------
+
+/** Create a reading room and return its id. */
+export async function createRoom(name: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const clean = name.trim().slice(0, 60);
+  if (!clean) return { error: "Name your room.", id: null };
+
+  const { data, error } = await supabase
+    .from("rooms")
+    .insert({ name: clean, created_by: user.id })
+    .select("id")
+    .single();
+  if (error) return { error: error.message, id: null };
+  revalidatePath("/rooms");
+  return { error: null, id: data.id as string };
+}
+
+/** Join a room (or refresh presence). Prefills the book from Currently Reading. */
+export async function joinRoom(roomId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Try to prefill the book title from the user's Currently Reading.
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("books:currently_reading (title)")
+    .eq("id", user.id)
+    .maybeSingle();
+  const bookTitle =
+    (prof?.books as unknown as { title: string } | null)?.title ?? null;
+
+  await supabase.from("room_participants").upsert(
+    {
+      room_id: roomId,
+      user_id: user.id,
+      book_title: bookTitle,
+      last_seen: new Date().toISOString(),
+    },
+    { onConflict: "room_id,user_id", ignoreDuplicates: false }
+  );
+  revalidatePath(`/rooms/${roomId}`);
+}
+
+/** Heartbeat: keep the current user marked as present in a room. */
+export async function touchPresence(roomId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from("room_participants")
+    .update({ last_seen: new Date().toISOString() })
+    .eq("room_id", roomId)
+    .eq("user_id", user.id);
+}
+
+/** Update your current page (and optionally your book) in a room. */
+export async function updateRoomPage(
+  roomId: string,
+  page: number,
+  bookTitle?: string
+) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const clamped = Math.max(0, Math.min(100000, Math.round(page)));
+  const patch: Record<string, unknown> = {
+    current_page: clamped,
+    last_seen: new Date().toISOString(),
+  };
+  if (typeof bookTitle === "string") patch.book_title = bookTitle.trim() || null;
+
+  await supabase
+    .from("room_participants")
+    .update(patch)
+    .eq("room_id", roomId)
+    .eq("user_id", user.id);
+  revalidatePath(`/rooms/${roomId}`);
+}
+
+/** Leave a room. */
+export async function leaveRoom(roomId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from("room_participants")
+    .delete()
+    .eq("room_id", roomId)
+    .eq("user_id", user.id);
+  revalidatePath(`/rooms/${roomId}`);
+}
+
+/** Start the shared room timer for `minutes` (any participant can). */
+export async function startTimer(roomId: string, minutes: number) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const mins = Math.max(1, Math.min(180, Math.round(minutes)));
+  const endsAt = new Date(Date.now() + mins * 60_000).toISOString();
+  await supabase.from("rooms").update({ timer_ends_at: endsAt }).eq("id", roomId);
+  revalidatePath(`/rooms/${roomId}`);
+}
+
+/** Clear the shared room timer. */
+export async function stopTimer(roomId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  await supabase.from("rooms").update({ timer_ends_at: null }).eq("id", roomId);
+  revalidatePath(`/rooms/${roomId}`);
+}
+
+/** Delete a room (creator only; RLS enforces). */
+export async function deleteRoom(roomId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  await supabase.from("rooms").delete().eq("id", roomId).eq("created_by", user.id);
+  redirect("/rooms");
+}
+
 /** Ask a question to a reader you follow. Trigger enforces follow/block rules. */
 export async function askReader(targetId: string, question: string) {
   const supabase = createClient();

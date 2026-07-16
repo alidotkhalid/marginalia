@@ -75,6 +75,12 @@ export default async function RootLayout({
                     Tags
                   </Link>
                   <Link
+                    href="/rooms"
+                    className="font-medium text-ink-soft hover:text-brass"
+                  >
+                    Rooms
+                  </Link>
+                  <Link
                     href="/requests"
                     className="relative font-medium text-ink-soft hover:text-brass"
                   >
