@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -52,6 +52,53 @@ export function RoomLive({
   const [page, setPage] = useState(me?.current_page ?? 0);
   const [, startAction] = useTransition();
 
+  // Gentle chime, synthesized (no audio file). The AudioContext is created on a
+  // user gesture (starting the timer) so it's allowed to play when time is up.
+  const audioRef = useRef<AudioContext | null>(null);
+  const wasActiveRef = useRef(false);
+
+  function ensureAudio() {
+    if (typeof window === "undefined") return;
+    if (!audioRef.current) {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (Ctx) {
+        try {
+          audioRef.current = new Ctx();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    audioRef.current?.resume?.();
+  }
+
+  function playChime() {
+    const ctx = audioRef.current;
+    if (!ctx) return;
+    try {
+      const notes = [523.25, 659.25, 783.99]; // C5 · E5 · G5
+      notes.forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        const start = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.14, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 1.7);
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Join on mount; heartbeat + poll while here; leave on unmount.
   useEffect(() => {
     joinRoom(roomId);
@@ -70,6 +117,16 @@ export function RoomLive({
   const remaining = timerEndsAt ? new Date(timerEndsAt).getTime() - now : null;
   const timerActive = remaining !== null && remaining > 0;
   const timerDone = remaining !== null && remaining <= 0;
+
+  // Chime once when a timer we were watching reaches zero.
+  useEffect(() => {
+    if (timerActive) wasActiveRef.current = true;
+    else if (timerDone && wasActiveRef.current) {
+      wasActiveRef.current = false;
+      playChime();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerActive, timerDone]);
 
   function setMyPage(next: number) {
     const val = Math.max(0, next);
@@ -109,7 +166,13 @@ export function RoomLive({
               {[25, 45, 60].map((m) => (
                 <button
                   key={m}
-                  onClick={() => startAction(async () => { await startTimer(roomId, m); router.refresh(); })}
+                  onClick={() => {
+                    ensureAudio();
+                    startAction(async () => {
+                      await startTimer(roomId, m);
+                      router.refresh();
+                    });
+                  }}
                   className="btn-accent !py-1.5 text-sm"
                 >
                   {m} min
@@ -127,7 +190,13 @@ export function RoomLive({
               {[25, 45, 60].map((m) => (
                 <button
                   key={m}
-                  onClick={() => startAction(async () => { await startTimer(roomId, m); router.refresh(); })}
+                  onClick={() => {
+                    ensureAudio();
+                    startAction(async () => {
+                      await startTimer(roomId, m);
+                      router.refresh();
+                    });
+                  }}
                   className="btn-accent !py-1.5 text-sm"
                 >
                   {m} min

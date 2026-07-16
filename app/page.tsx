@@ -67,12 +67,19 @@ export default async function FeedPage({
   const followingSet = new Set((following ?? []).map((f) => f.following_id));
   const authorIds = [user.id, ...followingSet];
 
-  const { data: posts } = await supabase
-    .from("feed_posts")
-    .select("*")
-    .in("author_id", authorIds)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const roomsCutoff = new Date(Date.now() - 3 * 60_000).toISOString();
+  const [{ data: posts }, { count: readersNow }] = await Promise.all([
+    supabase
+      .from("feed_posts")
+      .select("*")
+      .in("author_id", authorIds)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("room_participants")
+      .select("*", { count: "exact", head: true })
+      .gt("last_seen", roomsCutoff),
+  ]);
 
   const feed = (posts ?? []) as FeedPost[];
 
@@ -89,6 +96,28 @@ export default async function FeedPage({
           <PostComposer initialDraft={initialDraft} />
         </div>
       </section>
+
+      <Link
+        href="/rooms"
+        className="flex items-center justify-between rounded-card border border-brass/30 bg-brass/5 px-5 py-3 no-underline transition-colors hover:border-brass"
+      >
+        <span className="flex items-center gap-2 text-sm text-cream">
+          <span className="relative flex h-2.5 w-2.5">
+            {(readersNow ?? 0) > 0 && (
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-forest-light opacity-75" />
+            )}
+            <span
+              className={`relative inline-flex h-2.5 w-2.5 rounded-pill ${
+                (readersNow ?? 0) > 0 ? "bg-forest-light" : "bg-parchment-dark"
+              }`}
+            />
+          </span>
+          {readersNow && readersNow > 0
+            ? `${readersNow} ${readersNow === 1 ? "reader is" : "readers are"} reading in rooms right now`
+            : "No one in the rooms yet — open one"}
+        </span>
+        <span className="font-mono text-xs text-brass">Rooms →</span>
+      </Link>
 
       <section className="space-y-4">
         {feed.length === 0 ? (
