@@ -347,6 +347,27 @@ create policy "users remove their own votes"
   on public.comment_votes for delete using (auth.uid() = user_id);
 
 -- ============================================================================
+-- TAG_FOLLOWS — genre tags a reader follows.
+-- ============================================================================
+create table if not exists public.tag_follows (
+  user_id     uuid not null references public.profiles (id) on delete cascade,
+  tag         text not null,
+  created_at  timestamptz not null default now(),
+  primary key (user_id, tag)
+);
+
+create index if not exists tag_follows_user_idx on public.tag_follows (user_id);
+
+alter table public.tag_follows enable row level security;
+
+create policy "owners read their tag follows"
+  on public.tag_follows for select using (auth.uid() = user_id);
+create policy "owners follow tags"
+  on public.tag_follows for insert to authenticated with check (auth.uid() = user_id);
+create policy "owners unfollow tags"
+  on public.tag_follows for delete using (auth.uid() = user_id);
+
+-- ============================================================================
 -- TRIGGER: auto-create a profile row when a new auth user signs up.
 -- The username is passed through auth `raw_user_meta_data.username` at signup.
 -- ============================================================================

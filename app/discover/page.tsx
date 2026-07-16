@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { BookCover } from "@/components/BookCover";
 import { FollowButton } from "@/components/FollowButton";
 import { PostCard, type FeedPost } from "@/components/PostCard";
+import { TagFollowButton } from "@/components/TagFollowButton";
 import type { FollowStatus } from "@/app/actions";
 import { GENRES, isGenre, genreLabel } from "@/lib/genres";
 
@@ -33,7 +34,13 @@ function SearchForm({ defaultValue }: { defaultValue: string }) {
   );
 }
 
-function GenreChips({ active }: { active: string | null }) {
+function GenreChips({
+  active,
+  followed,
+}: {
+  active: string | null;
+  followed?: Set<string>;
+}) {
   return (
     <div className="flex flex-wrap gap-2">
       {active && (
@@ -54,7 +61,7 @@ function GenreChips({ active }: { active: string | null }) {
               : "border-parchment-dark text-cream-soft hover:border-brass hover:text-brass"
           }`}
         >
-          #{g.slug}
+          {followed?.has(g.slug) ? "★ " : ""}#{g.slug}
         </Link>
       ))}
     </div>
@@ -127,18 +134,22 @@ export default async function DiscoverPage({
   const activeGenre =
     searchParams.genre && isGenre(searchParams.genre) ? searchParams.genre : null;
 
-  // Follow status + blocks (used by any profile lists), computed once.
+  // Follow status + blocks + followed tags (used across the views), fetched once.
   const statusByUser = new Map<string, FollowStatus>();
   let blockedIds = new Set<string>();
+  let followedTags = new Set<string>();
   if (user) {
-    const [{ data: follows }, { data: myBlocks }] = await Promise.all([
-      supabase.from("follows").select("following_id, status").eq("follower_id", user.id),
-      supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id),
-    ]);
+    const [{ data: follows }, { data: myBlocks }, { data: tags }] =
+      await Promise.all([
+        supabase.from("follows").select("following_id, status").eq("follower_id", user.id),
+        supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id),
+        supabase.from("tag_follows").select("tag").eq("user_id", user.id),
+      ]);
     for (const f of follows ?? []) {
       statusByUser.set(f.following_id, (f.status as FollowStatus) ?? "accepted");
     }
     blockedIds = new Set((myBlocks ?? []).map((b) => b.blocked_id));
+    followedTags = new Set((tags ?? []).map((t) => t.tag));
   }
 
   // ---- Search view ----
@@ -225,14 +236,22 @@ export default async function DiscoverPage({
     return (
       <div className="mx-auto max-w-prose space-y-6">
         <section>
-          <h1 className="mb-3 font-display text-3xl font-bold text-brass">
-            #{activeGenre}
-          </h1>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-display text-3xl font-bold text-brass">
+              #{activeGenre}
+            </h1>
+            {user && (
+              <TagFollowButton
+                tag={activeGenre}
+                initialFollowing={followedTags.has(activeGenre)}
+              />
+            )}
+          </div>
           <SearchForm defaultValue="" />
         </section>
 
-        <p className="text-sm text-cream-soft">Posts about {genreLabel(activeGenre)}.</p>
-        <GenreChips active={activeGenre} />
+        <p className="text-sm text-cream-soft">Reads about {genreLabel(activeGenre)}.</p>
+        <GenreChips active={activeGenre} followed={followedTags} />
 
         {feed.length === 0 ? (
           <div className="card p-6 text-center text-ink-faint">
@@ -279,7 +298,7 @@ export default async function DiscoverPage({
         <SearchForm defaultValue="" />
       </section>
 
-      <GenreChips active={null} />
+      <GenreChips active={null} followed={followedTags} />
 
       <hr className="rule" />
 

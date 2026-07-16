@@ -696,6 +696,32 @@ export async function answerAsk(askId: string, answer: string) {
   return { error: null };
 }
 
+/** Follow or unfollow a genre tag. */
+export async function setTagFollow(tag: string, follow: boolean) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  if (!isGenre(tag)) return;
+
+  if (follow) {
+    await supabase
+      .from("tag_follows")
+      .upsert(
+        { user_id: user.id, tag },
+        { onConflict: "user_id,tag", ignoreDuplicates: true }
+      );
+  } else {
+    await supabase
+      .from("tag_follows")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("tag", tag);
+  }
+  revalidatePath("/", "layout");
+}
+
 /** Like or unlike a post. */
 export async function setLike(postId: string, like: boolean) {
   const supabase = createClient();

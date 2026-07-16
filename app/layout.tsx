@@ -69,6 +69,12 @@ export default async function RootLayout({
                     Discover
                   </Link>
                   <Link
+                    href="/tags"
+                    className="font-medium text-ink-soft hover:text-brass"
+                  >
+                    Tags
+                  </Link>
+                  <Link
                     href="/requests"
                     className="relative font-medium text-ink-soft hover:text-brass"
                   >
