@@ -407,6 +407,7 @@ create table if not exists public.room_participants (
   room_id       uuid not null references public.rooms (id) on delete cascade,
   user_id       uuid not null references public.profiles (id) on delete cascade,
   book_title    text,
+  book_cover_id bigint,
   current_page  int not null default 0 check (current_page between 0 and 100000),
   joined_at     timestamptz not null default now(),
   last_seen     timestamptz not null default now(),

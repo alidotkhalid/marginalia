@@ -677,20 +677,22 @@ export async function joinRoom(roomId: string) {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  // Try to prefill the book title from the user's Currently Reading.
+  // Try to prefill the book (title + cover) from the user's Currently Reading.
   const { data: prof } = await supabase
     .from("profiles")
-    .select("books!currently_reading (title)")
+    .select("books!currently_reading (title, cover_id)")
     .eq("id", user.id)
     .maybeSingle();
-  const bookTitle =
-    (prof?.books as unknown as { title: string } | null)?.title ?? null;
+  const book = prof?.books as unknown as
+    | { title: string; cover_id: number | null }
+    | null;
 
   await supabase.from("room_participants").upsert(
     {
       room_id: roomId,
       user_id: user.id,
-      book_title: bookTitle,
+      book_title: book?.title ?? null,
+      book_cover_id: book?.cover_id ?? null,
       last_seen: new Date().toISOString(),
     },
     { onConflict: "room_id,user_id", ignoreDuplicates: false }

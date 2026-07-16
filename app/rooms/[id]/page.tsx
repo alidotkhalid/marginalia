@@ -24,7 +24,7 @@ export default async function RoomPage({
   const { data: parts } = await supabase
     .from("room_participants")
     .select(
-      "user_id, book_title, current_page, last_seen, profiles!user_id (username, display_name, avatar_icon)"
+      "user_id, book_title, book_cover_id, current_page, last_seen, profiles!user_id (username, display_name, avatar_icon)"
     )
     .eq("room_id", params.id)
     .gt("last_seen", cutoff)
@@ -34,6 +34,7 @@ export default async function RoomPage({
     (parts ?? []) as unknown as Array<{
       user_id: string;
       book_title: string | null;
+      book_cover_id: number | null;
       current_page: number;
       last_seen: string;
       profiles: {
@@ -48,6 +49,7 @@ export default async function RoomPage({
     display_name: p.profiles?.display_name ?? null,
     avatar_icon: p.profiles?.avatar_icon ?? null,
     book_title: p.book_title,
+    book_cover_id: p.book_cover_id,
     current_page: p.current_page,
     last_seen: p.last_seen,
   }));

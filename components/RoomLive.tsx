@@ -13,6 +13,7 @@ import {
   deleteRoom,
 } from "@/app/actions";
 import { Avatar } from "./Avatar";
+import { BookCover } from "./BookCover";
 
 export type RoomParticipant = {
   user_id: string;
@@ -20,6 +21,7 @@ export type RoomParticipant = {
   display_name: string | null;
   avatar_icon: string | null;
   book_title: string | null;
+  book_cover_id: number | null;
   current_page: number;
   last_seen: string;
 };
@@ -56,6 +58,30 @@ export function RoomLive({
   // user gesture (starting the timer) so it's allowed to play when time is up.
   const audioRef = useRef<AudioContext | null>(null);
   const wasActiveRef = useRef(false);
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("marginalia:muted") === "1") {
+        setMuted(true);
+        mutedRef.current = true;
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    mutedRef.current = next;
+    try {
+      localStorage.setItem("marginalia:muted", next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
 
   function ensureAudio() {
     if (typeof window === "undefined") return;
@@ -76,6 +102,7 @@ export function RoomLive({
   }
 
   function playChime() {
+    if (mutedRef.current) return;
     const ctx = audioRef.current;
     if (!ctx) return;
     try {
@@ -144,7 +171,16 @@ export function RoomLive({
   return (
     <div className="space-y-6">
       {/* Timer */}
-      <section className="card p-6 text-center">
+      <section className="relative card p-6 text-center">
+        <button
+          type="button"
+          onClick={toggleMute}
+          title={muted ? "Chime muted — tap to unmute" : "Mute the chime"}
+          aria-label={muted ? "Unmute chime" : "Mute chime"}
+          className="absolute right-3 top-3 text-ink-faint hover:text-brass"
+        >
+          {muted ? "🔕" : "🔔"}
+        </button>
         {timerActive ? (
           <>
             <p className="font-mono text-5xl font-semibold text-brass">
@@ -255,6 +291,13 @@ export function RoomLive({
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-pill border-2 border-parchment bg-forest-light" />
               </span>
+              {p.book_title && (
+                <BookCover
+                  coverId={p.book_cover_id}
+                  title={p.book_title}
+                  size="S"
+                />
+              )}
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/profile/${p.username}`}
