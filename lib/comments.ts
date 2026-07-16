@@ -10,6 +10,8 @@ export type CommentRow = {
     display_name: string | null;
     avatar_icon: string | null;
   } | null;
+  // Null for top-level comments; the parent comment id for a reply.
+  parent_id: string | null;
   // Net vote score and the current user's vote (-1, 0, or 1).
   score: number;
   my_vote: number;

@@ -123,9 +123,13 @@ create table if not exists public.comments (
   id          uuid primary key default gen_random_uuid(),
   post_id     uuid not null references public.posts (id) on delete cascade,
   author_id   uuid not null references public.profiles (id) on delete cascade,
+  -- A reply points at its parent comment (null = top-level).
+  parent_id   uuid references public.comments (id) on delete cascade,
   body        text not null check (char_length(body) between 1 and 500),
   created_at  timestamptz not null default now()
 );
+
+create index if not exists comments_parent_idx on public.comments (parent_id);
 
 create index if not exists comments_post_idx
   on public.comments (post_id, created_at);

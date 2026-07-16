@@ -232,7 +232,7 @@ export async function getComments(postId: string): Promise<CommentRow[]> {
   const { data } = await supabase
     .from("comments")
     .select(
-      "id, body, created_at, author_id, author:profiles!author_id (username, display_name, avatar_icon)"
+      "id, body, created_at, author_id, parent_id, author:profiles!author_id (username, display_name, avatar_icon)"
     )
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
@@ -285,8 +285,12 @@ export async function voteComment(commentId: string, value: number) {
   revalidatePath("/", "layout");
 }
 
-/** Add a comment to a post. */
-export async function addComment(postId: string, body: string) {
+/** Add a comment to a post, or a reply if parentId is given. */
+export async function addComment(
+  postId: string,
+  body: string,
+  parentId?: string
+) {
   const supabase = createClient();
   const {
     data: { user },
@@ -296,9 +300,12 @@ export async function addComment(postId: string, body: string) {
   const text = body.trim().slice(0, 500);
   if (!text) return { error: "Write something first." };
 
-  const { error } = await supabase
-    .from("comments")
-    .insert({ post_id: postId, author_id: user.id, body: text });
+  const { error } = await supabase.from("comments").insert({
+    post_id: postId,
+    author_id: user.id,
+    body: text,
+    parent_id: parentId ?? null,
+  });
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
