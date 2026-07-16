@@ -12,6 +12,7 @@ type ReaderRow = {
   username: string;
   display_name: string | null;
   bio: string | null;
+  avatar_icon: string | null;
   books: { title: string; author: string | null; cover_id: number | null } | null;
 };
 
@@ -74,7 +75,7 @@ function ReaderCard({
     <li className="card p-5">
       <div className="flex items-start gap-4">
         <Link href={`/profile/${r.username}`}>
-          <Avatar name={r.display_name ?? r.username} size={52} />
+          <Avatar name={r.display_name ?? r.username} icon={r.avatar_icon} size={52} />
         </Link>
         <div className="min-w-0 flex-1">
           <Link
@@ -146,7 +147,7 @@ export default async function DiscoverPage({
       supabase
         .from("profiles")
         .select(
-          "id, username, display_name, bio, books!currently_reading (title, author, cover_id)"
+          "id, username, display_name, bio, avatar_icon, books!currently_reading (title, author, cover_id)"
         )
         .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
         .limit(20),
@@ -257,7 +258,7 @@ export default async function DiscoverPage({
   let query = supabase
     .from("profiles")
     .select(
-      "id, username, display_name, bio, books!currently_reading (title, author, cover_id)"
+      "id, username, display_name, bio, avatar_icon, books!currently_reading (title, author, cover_id)"
     )
     .order("created_at", { ascending: false })
     .limit(50);

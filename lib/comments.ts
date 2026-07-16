@@ -5,7 +5,11 @@ export type CommentRow = {
   body: string;
   created_at: string;
   author_id: string;
-  author: { username: string; display_name: string | null } | null;
+  author: {
+    username: string;
+    display_name: string | null;
+    avatar_icon: string | null;
+  } | null;
   // Net vote score and the current user's vote (-1, 0, or 1).
   score: number;
   my_vote: number;

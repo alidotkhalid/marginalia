@@ -28,6 +28,8 @@ create table if not exists public.profiles (
                         check (accent_color ~ '^#[0-9a-fA-F]{6}$'),
   banner_style        text not null default 'gradient'
                         check (banner_style in ('gradient', 'shelf', 'marble', 'plain')),
+  -- Chosen preset pixel-art avatar icon id (null = auto identicon).
+  avatar_icon         text,
   created_at          timestamptz not null default now()
 );
 
@@ -388,6 +390,7 @@ with (security_invoker = true) as
     p.author_id,
     prof.username      as author_username,
     prof.display_name  as author_display_name,
+    prof.avatar_icon   as author_avatar_icon,
     b.olid             as book_olid,
     b.title            as book_title,
     b.author           as book_author,

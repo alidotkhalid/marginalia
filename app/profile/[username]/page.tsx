@@ -30,7 +30,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, username, display_name, bio, reading_progress, accent_color, banner_style, is_private, books!currently_reading (title, author, cover_id)"
+      "id, username, display_name, bio, reading_progress, accent_color, banner_style, is_private, avatar_icon, books!currently_reading (title, author, cover_id)"
     )
     .eq("username", params.username)
     .maybeSingle();
@@ -153,6 +153,7 @@ export default async function ProfilePage({
             <div className="flex items-end gap-4">
               <Avatar
                 name={displayName}
+                icon={(profile.avatar_icon as string | null) ?? null}
                 size={104}
                 className="-mt-12 !ring-4 !ring-parchment"
               />

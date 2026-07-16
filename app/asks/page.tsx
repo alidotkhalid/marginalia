@@ -8,7 +8,11 @@ type AskRow = {
   id: string;
   question: string;
   created_at: string;
-  asker: { username: string; display_name: string | null } | null;
+  asker: {
+    username: string;
+    display_name: string | null;
+    avatar_icon: string | null;
+  } | null;
 };
 
 // Inbox of questions other readers have asked you. Reply (creates a post) or dismiss.
@@ -21,7 +25,9 @@ export default async function AsksPage() {
 
   const { data } = await supabase
     .from("asks")
-    .select("id, question, created_at, asker:profiles!asker_id (username, display_name)")
+    .select(
+      "id, question, created_at, asker:profiles!asker_id (username, display_name, avatar_icon)"
+    )
     .eq("target_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -48,6 +54,7 @@ export default async function AsksPage() {
                 <Link href={`/profile/${a.asker?.username ?? ""}`}>
                   <Avatar
                     name={a.asker?.display_name ?? a.asker?.username ?? "?"}
+                    icon={a.asker?.avatar_icon}
                     size={40}
                   />
                 </Link>

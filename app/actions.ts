@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { BookResult } from "@/lib/openlibrary";
 import { postLimit } from "@/lib/constants";
 import { isGenre } from "@/lib/genres";
+import { isAvatarIcon } from "@/lib/avatarIcons";
 import type { CommentRow } from "@/lib/comments";
 
 /**
@@ -231,7 +232,7 @@ export async function getComments(postId: string): Promise<CommentRow[]> {
   const { data } = await supabase
     .from("comments")
     .select(
-      "id, body, created_at, author_id, author:profiles!author_id (username, display_name)"
+      "id, body, created_at, author_id, author:profiles!author_id (username, display_name, avatar_icon)"
     )
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
@@ -408,6 +409,19 @@ export async function updateBio(formData: FormData) {
     .eq("id", user.id);
   revalidatePath("/", "layout");
   return { error: null };
+}
+
+/** Set the reader's preset avatar icon (empty string = auto identicon). */
+export async function updateAvatarIcon(icon: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const value = icon && isAvatarIcon(icon) ? icon : null;
+  await supabase.from("profiles").update({ avatar_icon: value }).eq("id", user.id);
+  revalidatePath("/", "layout");
 }
 
 /** Save the reader's profile accent color (#rrggbb) and banner style. */

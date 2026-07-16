@@ -116,6 +116,7 @@ export function Comments({
               <Link href={`/profile/${c.author?.username ?? ""}`}>
                 <Avatar
                   name={c.author?.display_name ?? c.author?.username ?? "?"}
+                  icon={c.author?.avatar_icon}
                   size={28}
                 />
               </Link>

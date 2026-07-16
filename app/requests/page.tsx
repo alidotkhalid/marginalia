@@ -6,7 +6,11 @@ import { FollowRequestActions } from "@/components/FollowRequestActions";
 
 type RequestRow = {
   follower_id: string;
-  follower: { username: string; display_name: string | null } | null;
+  follower: {
+    username: string;
+    display_name: string | null;
+    avatar_icon: string | null;
+  } | null;
 };
 
 // Incoming follow requests for private accounts — approve or decline each.
@@ -19,7 +23,9 @@ export default async function RequestsPage() {
 
   const { data } = await supabase
     .from("follows")
-    .select("follower_id, created_at, follower:profiles!follower_id (username, display_name)")
+    .select(
+      "follower_id, created_at, follower:profiles!follower_id (username, display_name, avatar_icon)"
+    )
     .eq("following_id", user.id)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
@@ -48,6 +54,7 @@ export default async function RequestsPage() {
               <Link href={`/profile/${r.follower?.username ?? ""}`}>
                 <Avatar
                   name={r.follower?.display_name ?? r.follower?.username ?? "?"}
+                  icon={r.follower?.avatar_icon}
                   size={44}
                 />
               </Link>

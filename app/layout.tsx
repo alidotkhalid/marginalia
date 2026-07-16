@@ -23,12 +23,13 @@ export default async function RootLayout({
 
   let username: string | null = null;
   let displayName: string | null = null;
+  let avatarIcon: string | null = null;
   let pendingRequests = 0;
   if (user) {
     const [{ data }, { count }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("username, display_name")
+        .select("username, display_name, avatar_icon")
         .eq("id", user.id)
         .single(),
       supabase
@@ -39,6 +40,7 @@ export default async function RootLayout({
     ]);
     username = data?.username ?? null;
     displayName = data?.display_name ?? data?.username ?? null;
+    avatarIcon = data?.avatar_icon ?? null;
     pendingRequests = count ?? 0;
   }
 
@@ -99,7 +101,7 @@ export default async function RootLayout({
                   </form>
                   {username && (
                     <Link href={`/profile/${username}`} title={`@${username}`}>
-                      <Avatar name={displayName ?? username} size={34} />
+                      <Avatar name={displayName ?? username} icon={avatarIcon} size={34} />
                     </Link>
                   )}
                 </>

@@ -8,7 +8,11 @@ import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 
 type BlockRow = {
   blocked_id: string;
-  blocked: { username: string; display_name: string | null } | null;
+  blocked: {
+    username: string;
+    display_name: string | null;
+    avatar_icon: string | null;
+  } | null;
 };
 
 export default async function SettingsPage() {
@@ -23,7 +27,9 @@ export default async function SettingsPage() {
       supabase.from("profiles").select("is_private").eq("id", user.id).maybeSingle(),
       supabase
         .from("blocks")
-        .select("blocked_id, blocked:profiles!blocked_id (username, display_name)")
+        .select(
+          "blocked_id, blocked:profiles!blocked_id (username, display_name, avatar_icon)"
+        )
         .eq("blocker_id", user.id),
       supabase
         .from("follows")
@@ -81,6 +87,7 @@ export default async function SettingsPage() {
               <li key={b.blocked_id} className="flex items-center gap-3">
                 <Avatar
                   name={b.blocked?.display_name ?? b.blocked?.username ?? "?"}
+                  icon={b.blocked?.avatar_icon}
                   size={40}
                 />
                 <div className="min-w-0 flex-1">

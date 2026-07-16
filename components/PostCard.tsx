@@ -13,6 +13,7 @@ export type FeedPost = {
   author_id: string;
   author_username: string;
   author_display_name: string | null;
+  author_avatar_icon: string | null;
   book_title: string | null;
   book_author: string | null;
   book_cover_id: number | null;
@@ -62,7 +63,11 @@ export function PostCard({
     <article className="card p-5">
       <header className="mb-3 flex items-center gap-3">
         <Link href={`/profile/${post.author_username}`}>
-          <Avatar name={post.author_display_name ?? post.author_username} size={40} />
+          <Avatar
+            name={post.author_display_name ?? post.author_username}
+            icon={post.author_avatar_icon}
+            size={40}
+          />
         </Link>
         <div className="min-w-0 flex-1">
           <Link
