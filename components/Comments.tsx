@@ -200,10 +200,26 @@ export function Comments({
           type="button"
           onClick={() => remove(c.id)}
           disabled={pending}
-          className="text-xs text-ink-faint hover:text-oxblood"
           aria-label="Delete comment"
+          title="Delete comment"
+          className="mt-0.5 shrink-0 self-start text-ink-faint hover:text-oxblood"
         >
-          ×
+          <svg
+            width="13"
+            height="14"
+            viewBox="0 0 14 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M2 4h10" />
+            <path d="M5.5 4V2.5h3V4" />
+            <path d="M3.6 4l.5 9.2a1 1 0 0 0 1 .95h3.8a1 1 0 0 0 1-.95L10.4 4" />
+            <path d="M6 6.7v5M8 6.7v5" />
+          </svg>
         </button>
       )}
     </div>
