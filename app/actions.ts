@@ -680,7 +680,7 @@ export async function joinRoom(roomId: string) {
   // Try to prefill the book title from the user's Currently Reading.
   const { data: prof } = await supabase
     .from("profiles")
-    .select("books:currently_reading (title)")
+    .select("books!currently_reading (title)")
     .eq("id", user.id)
     .maybeSingle();
   const bookTitle =
@@ -754,6 +754,18 @@ export async function leaveRoom(roomId: string) {
   revalidatePath(`/rooms/${roomId}`);
 }
 
+/** Ensure the current user is a participant of a room (so room-update RLS passes). */
+async function ensureParticipant(
+  supabase: ReturnType<typeof createClient>,
+  roomId: string,
+  userId: string
+) {
+  await supabase.from("room_participants").upsert(
+    { room_id: roomId, user_id: userId, last_seen: new Date().toISOString() },
+    { onConflict: "room_id,user_id", ignoreDuplicates: false }
+  );
+}
+
 /** Start the shared room timer for `minutes` (any participant can). */
 export async function startTimer(roomId: string, minutes: number) {
   const supabase = createClient();
@@ -762,10 +774,15 @@ export async function startTimer(roomId: string, minutes: number) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  await ensureParticipant(supabase, roomId, user.id);
   const mins = Math.max(1, Math.min(180, Math.round(minutes)));
   const endsAt = new Date(Date.now() + mins * 60_000).toISOString();
-  await supabase.from("rooms").update({ timer_ends_at: endsAt }).eq("id", roomId);
+  const { error } = await supabase
+    .from("rooms")
+    .update({ timer_ends_at: endsAt })
+    .eq("id", roomId);
   revalidatePath(`/rooms/${roomId}`);
+  return { error: error?.message ?? null };
 }
 
 /** Clear the shared room timer. */
@@ -775,6 +792,8 @@ export async function stopTimer(roomId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  await ensureParticipant(supabase, roomId, user.id);
   await supabase.from("rooms").update({ timer_ends_at: null }).eq("id", roomId);
   revalidatePath(`/rooms/${roomId}`);
 }
