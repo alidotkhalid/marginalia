@@ -197,7 +197,12 @@ export default async function DiscoverPage({
           ) : (
             <div className="space-y-4">
               {posts.map((post) => (
-                <PostCard key={post.id} post={post} currentUserId={user?.id} />
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUserId={user?.id}
+                  followStatus={statusByUser.get(post.author_id) ?? "none"}
+                />
               ))}
             </div>
           )}
@@ -235,7 +240,12 @@ export default async function DiscoverPage({
         ) : (
           <div className="space-y-4">
             {feed.map((post) => (
-              <PostCard key={post.id} post={post} currentUserId={user?.id} />
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUserId={user?.id}
+                followStatus={statusByUser.get(post.author_id) ?? "none"}
+              />
             ))}
           </div>
         )}

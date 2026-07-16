@@ -64,7 +64,8 @@ export default async function FeedPage({
     .eq("follower_id", user.id)
     .eq("status", "accepted");
 
-  const authorIds = [user.id, ...(following?.map((f) => f.following_id) ?? [])];
+  const followingSet = new Set((following ?? []).map((f) => f.following_id));
+  const authorIds = [user.id, ...followingSet];
 
   const { data: posts } = await supabase
     .from("feed_posts")
@@ -105,7 +106,12 @@ export default async function FeedPage({
           </div>
         ) : (
           feed.map((post) => (
-            <PostCard key={post.id} post={post} currentUserId={user.id} />
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUserId={user.id}
+              followStatus={followingSet.has(post.author_id) ? "accepted" : "none"}
+            />
           ))
         )}
       </section>

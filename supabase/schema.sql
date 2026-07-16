@@ -299,6 +299,27 @@ create policy "target or asker delete asks"
   on public.asks for delete using (auth.uid() = target_id or auth.uid() = asker_id);
 
 -- ============================================================================
+-- LIKES — hearts on posts.
+-- ============================================================================
+create table if not exists public.likes (
+  post_id     uuid not null references public.posts (id) on delete cascade,
+  user_id     uuid not null references public.profiles (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+create index if not exists likes_post_idx on public.likes (post_id);
+
+alter table public.likes enable row level security;
+
+create policy "likes are viewable by everyone"
+  on public.likes for select using (true);
+create policy "users like on their own behalf"
+  on public.likes for insert to authenticated with check (auth.uid() = user_id);
+create policy "users unlike on their own behalf"
+  on public.likes for delete using (auth.uid() = user_id);
+
+-- ============================================================================
 -- TRIGGER: auto-create a profile row when a new auth user signs up.
 -- The username is passed through auth `raw_user_meta_data.username` at signup.
 -- ============================================================================
@@ -352,7 +373,12 @@ with (security_invoker = true) as
     p.text_quote,
     p.text_review,
     p.answer_question,
-    p.answer_asker
+    p.answer_asker,
+    (select count(*) from public.likes lk where lk.post_id = p.id)::int as like_count,
+    exists (
+      select 1 from public.likes lk
+      where lk.post_id = p.id and lk.user_id = auth.uid()
+    ) as liked_by_me
   from public.posts p
   join public.profiles prof on prof.id = p.author_id
   left join public.books b   on b.id = p.book_id

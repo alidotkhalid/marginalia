@@ -22,10 +22,12 @@ export function Comments({
   postId,
   count,
   currentUserId,
+  actions,
 }: {
   postId: string;
   count: number;
   currentUserId?: string;
+  actions?: React.ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -69,13 +71,16 @@ export function Comments({
 
   return (
     <div className="mt-3 border-t border-parchment-dark pt-3">
-      <button
-        type="button"
-        onClick={toggle}
-        className="text-sm font-medium text-ink-faint hover:text-brass"
-      >
-        💬 {shown} {shown === 1 ? "comment" : "comments"}
-      </button>
+      <div className="flex items-center gap-4">
+        {actions}
+        <button
+          type="button"
+          onClick={toggle}
+          className="text-sm font-medium text-ink-faint hover:text-brass"
+        >
+          💬 {shown} {shown === 1 ? "comment" : "comments"}
+        </button>
+      </div>
 
       {open && (
         <div className="mt-3 space-y-3">

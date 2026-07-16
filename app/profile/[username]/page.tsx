@@ -294,7 +294,12 @@ export default async function ProfilePage({
               </div>
             ) : (
               feed.map((post) => (
-                <PostCard key={post.id} post={post} currentUserId={user?.id} />
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUserId={user?.id}
+                  followStatus={myStatus}
+                />
               ))
             )}
           </section>

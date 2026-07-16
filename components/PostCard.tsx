@@ -3,6 +3,9 @@ import { BookCover } from "./BookCover";
 import { Avatar } from "./Avatar";
 import { Comments } from "./Comments";
 import { PostContent } from "./PostContent";
+import { FollowButton } from "./FollowButton";
+import { LikeButton } from "./LikeButton";
+import type { FollowStatus } from "@/app/actions";
 
 export type FeedPost = {
   id: string;
@@ -20,6 +23,8 @@ export type FeedPost = {
   text_review: string | null;
   answer_question: string | null;
   answer_asker: string | null;
+  like_count: number;
+  liked_by_me: boolean;
 };
 
 function timeAgo(iso: string) {
@@ -38,22 +43,28 @@ function timeAgo(iso: string) {
   });
 }
 
-// A single reading note, styled like an index card. Quotes get a left rule and
-// italic treatment; the genre shows as a clickable hashtag; comments expand below.
+// A single reading note: book on top, then the text sections, with like/follow
+// controls so readers can engage or follow the author directly from the post.
 export function PostCard({
   post,
   currentUserId,
+  followStatus,
 }: {
   post: FeedPost;
   currentUserId?: string;
+  followStatus?: FollowStatus;
 }) {
+  const isOwn = !!currentUserId && currentUserId === post.author_id;
+  const showFollow =
+    !!currentUserId && !isOwn && (followStatus ?? "none") !== "accepted";
+
   return (
     <article className="card p-5">
       <header className="mb-3 flex items-center gap-3">
         <Link href={`/profile/${post.author_username}`}>
           <Avatar name={post.author_display_name ?? post.author_username} size={40} />
         </Link>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <Link
             href={`/profile/${post.author_username}`}
             className="font-display font-semibold text-ink no-underline hover:text-brass"
@@ -64,6 +75,12 @@ export function PostCard({
             @{post.author_username} · {timeAgo(post.created_at)}
           </p>
         </div>
+        {showFollow && (
+          <FollowButton
+            targetId={post.author_id}
+            initialStatus={followStatus ?? "none"}
+          />
+        )}
       </header>
 
       {post.answer_question && (
@@ -83,20 +100,14 @@ export function PostCard({
         </div>
       )}
 
-      <PostContent
-        postId={post.id}
-        note={post.text_note}
-        quote={post.text_quote}
-        review={post.text_review}
-        genre={post.genre}
-        isOwner={!!currentUserId && currentUserId === post.author_id}
-      />
-
+      {/* Book on top */}
       {post.book_title && (
-        <div className="mt-3 flex items-center gap-3 border-t border-parchment-dark pt-3">
+        <div className="mb-3 flex items-center gap-3 rounded-card border border-parchment-dark bg-parchment-light p-2">
           <BookCover coverId={post.book_cover_id} title={post.book_title} size="S" />
           <div className="min-w-0 text-sm">
-            <p className="truncate font-display text-ink-soft">{post.book_title}</p>
+            <p className="truncate font-display font-semibold text-ink-soft">
+              {post.book_title}
+            </p>
             <p className="truncate text-ink-faint">
               {post.book_author ?? "Unknown author"}
             </p>
@@ -104,10 +115,28 @@ export function PostCard({
         </div>
       )}
 
+      {/* Text sections at the bottom */}
+      <PostContent
+        postId={post.id}
+        note={post.text_note}
+        quote={post.text_quote}
+        review={post.text_review}
+        genre={post.genre}
+        isOwner={isOwn}
+      />
+
       <Comments
         postId={post.id}
         count={post.comment_count ?? 0}
         currentUserId={currentUserId}
+        actions={
+          <LikeButton
+            postId={post.id}
+            initialLiked={!!post.liked_by_me}
+            initialCount={post.like_count ?? 0}
+            canLike={!!currentUserId}
+          />
+        }
       />
     </article>
   );
