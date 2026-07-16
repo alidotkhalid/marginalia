@@ -242,6 +242,7 @@ export default async function DiscoverPage({
             </h1>
             {user && (
               <TagFollowButton
+                key={activeGenre}
                 tag={activeGenre}
                 initialFollowing={followedTags.has(activeGenre)}
               />
