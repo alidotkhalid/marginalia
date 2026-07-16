@@ -222,7 +222,7 @@ export default async function ProfilePage({
           <aside className="space-y-6">
             {isSelf && (
               <section className="card p-5">
-                <h3 className="section-title mb-3 text-lg">Create a Post</h3>
+                <h3 className="section-title mb-3 text-lg">Share a Read</h3>
                 <PostComposer />
               </section>
             )}
@@ -281,15 +281,15 @@ export default async function ProfilePage({
               className="flex items-center gap-4 border-b-2 pb-1"
               style={{ borderColor: accent }}
             >
-              <span className="pb-1 text-sm font-semibold text-cream">Notes</span>
+              <span className="pb-1 text-sm font-semibold text-cream">Reads</span>
             </div>
             {feed.length === 0 ? (
               <div className="card p-6 text-center">
-                <p className="font-display text-lg text-ink-soft">No notes yet.</p>
+                <p className="font-display text-lg text-ink-soft">No reads yet.</p>
                 <p className="mt-1 text-sm text-ink-faint">
                   {isSelf
-                    ? "Share your first thought above."
-                    : "This reader hasn't posted yet."}
+                    ? "Share your first read above."
+                    : "This reader hasn't shared any reads yet."}
                 </p>
               </div>
             ) : (

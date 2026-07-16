@@ -97,7 +97,7 @@ export default async function FeedPage({
               Your feed is a blank page.
             </p>
             <p className="mt-1 text-sm text-ink-faint">
-              Post your first note above, or{" "}
+              Share your first read above, or{" "}
               <Link href="/discover" className="link">
                 find readers to follow
               </Link>

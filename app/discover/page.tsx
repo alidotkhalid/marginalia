@@ -24,7 +24,7 @@ function SearchForm({ defaultValue }: { defaultValue: string }) {
         type="search"
         name="q"
         defaultValue={defaultValue}
-        placeholder="Search posts, readers, keywords…"
+        placeholder="Search reads, readers, keywords…"
         className="input"
         aria-label="Search"
       />
@@ -191,9 +191,9 @@ export default async function DiscoverPage({
         </section>
 
         <section className="space-y-3">
-          <h2 className="section-title text-lg">Posts</h2>
+          <h2 className="section-title text-lg">Reads</h2>
           {posts.length === 0 ? (
-            <p className="text-sm text-cream-soft">No posts match &ldquo;{q}&rdquo;.</p>
+            <p className="text-sm text-cream-soft">No reads match &ldquo;{q}&rdquo;.</p>
           ) : (
             <div className="space-y-4">
               {posts.map((post) => (
@@ -235,7 +235,7 @@ export default async function DiscoverPage({
 
         {feed.length === 0 ? (
           <div className="card p-6 text-center text-ink-faint">
-            No posts in this genre yet.
+            No reads in this genre yet.
           </div>
         ) : (
           <div className="space-y-4">
@@ -273,7 +273,7 @@ export default async function DiscoverPage({
       <section>
         <h1 className="mb-1 font-display text-3xl font-bold text-cream">Discover</h1>
         <p className="mb-3 text-sm text-cream-soft">
-          Search posts and readers, browse by genre, or find people to follow.
+          Search reads and readers, browse by genre, or find people to follow.
         </p>
         <SearchForm defaultValue="" />
       </section>

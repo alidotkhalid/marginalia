@@ -224,6 +224,10 @@ export async function deleteDraft(draftId: string) {
 /** Fetch the comments for a post (author info joined). */
 export async function getComments(postId: string): Promise<CommentRow[]> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data } = await supabase
     .from("comments")
     .select(
@@ -231,7 +235,53 @@ export async function getComments(postId: string): Promise<CommentRow[]> {
     )
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
-  return (data ?? []) as unknown as CommentRow[];
+
+  const base = (data ?? []) as unknown as Omit<CommentRow, "score" | "my_vote">[];
+  if (base.length === 0) return [];
+
+  const ids = base.map((c) => c.id);
+  const { data: votes } = await supabase
+    .from("comment_votes")
+    .select("comment_id, user_id, value")
+    .in("comment_id", ids);
+
+  const scoreMap = new Map<string, number>();
+  const myVoteMap = new Map<string, number>();
+  for (const v of votes ?? []) {
+    scoreMap.set(v.comment_id, (scoreMap.get(v.comment_id) ?? 0) + v.value);
+    if (user && v.user_id === user.id) myVoteMap.set(v.comment_id, v.value);
+  }
+
+  return base.map((c) => ({
+    ...c,
+    score: scoreMap.get(c.id) ?? 0,
+    my_vote: myVoteMap.get(c.id) ?? 0,
+  }));
+}
+
+/** Upvote (1), downvote (-1), or clear (0) your vote on a comment. */
+export async function voteComment(commentId: string, value: number) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  if (value === 0) {
+    await supabase
+      .from("comment_votes")
+      .delete()
+      .eq("comment_id", commentId)
+      .eq("user_id", user.id);
+  } else {
+    await supabase
+      .from("comment_votes")
+      .upsert(
+        { comment_id: commentId, user_id: user.id, value: value === 1 ? 1 : -1 },
+        { onConflict: "comment_id,user_id" }
+      );
+  }
+  revalidatePath("/", "layout");
 }
 
 /** Add a comment to a post. */

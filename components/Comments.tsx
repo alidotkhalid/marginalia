@@ -3,7 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getComments, addComment, deleteComment } from "@/app/actions";
+import {
+  getComments,
+  addComment,
+  deleteComment,
+  voteComment,
+} from "@/app/actions";
 import type { CommentRow } from "@/lib/comments";
 import { Avatar } from "./Avatar";
 import { Spinner } from "./Spinner";
@@ -67,6 +72,26 @@ export function Comments({
     });
   }
 
+  function vote(commentId: string, dir: 1 | -1) {
+    if (!currentUserId) return;
+    const cur = comments?.find((c) => c.id === commentId);
+    if (!cur) return;
+    const newVote = cur.my_vote === dir ? 0 : dir;
+    const delta = newVote - cur.my_vote;
+    // Optimistic update.
+    setComments(
+      (prev) =>
+        prev?.map((c) =>
+          c.id === commentId
+            ? { ...c, my_vote: newVote, score: c.score + delta }
+            : c
+        ) ?? null
+    );
+    startTransition(async () => {
+      await voteComment(commentId, newVote);
+    });
+  }
+
   const shown = comments?.length ?? count;
 
   return (
@@ -107,6 +132,41 @@ export function Comments({
                   </span>
                 </p>
                 <p className="whitespace-pre-wrap text-sm text-ink-soft">{c.body}</p>
+                <div className="mt-1 flex items-center gap-1.5 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => vote(c.id, 1)}
+                    disabled={!currentUserId}
+                    aria-label="Upvote"
+                    className={`${
+                      c.my_vote === 1 ? "text-brass" : "text-ink-faint"
+                    } ${currentUserId ? "hover:text-brass" : "cursor-default"}`}
+                  >
+                    ▲
+                  </button>
+                  <span
+                    className={`min-w-4 text-center font-mono text-xs ${
+                      c.score > 0
+                        ? "text-brass"
+                        : c.score < 0
+                        ? "text-oxblood"
+                        : "text-ink-faint"
+                    }`}
+                  >
+                    {c.score}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => vote(c.id, -1)}
+                    disabled={!currentUserId}
+                    aria-label="Downvote"
+                    className={`${
+                      c.my_vote === -1 ? "text-oxblood" : "text-ink-faint"
+                    } ${currentUserId ? "hover:text-oxblood" : "cursor-default"}`}
+                  >
+                    ▼
+                  </button>
+                </div>
               </div>
               {currentUserId === c.author_id && (
                 <button
