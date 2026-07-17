@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateAvatarIcon } from "@/app/actions";
-import { AVATAR_ICON_IDS } from "@/lib/avatarIcons";
+import { AVATAR_ICON_IDS, avatarLabel } from "@/lib/avatarIcons";
 import { Avatar } from "./Avatar";
 
-// Lets a reader pick a preset pixel-art icon, or "Auto" for their identicon.
+// Lets a reader pick one of the Marginaly avatars, or "Auto" for a stable one.
 export function AvatarPicker({
   name,
   current,
@@ -34,7 +34,7 @@ export function AvatarPicker({
       <div className="mb-3 flex items-center gap-3">
         <Avatar name={name} icon={selected || null} size={56} />
         <p className="text-sm text-ink-faint">
-          Pick a pixel emblem, or keep your auto-generated one.
+          Pick an avatar, or keep the one chosen for you.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -44,7 +44,7 @@ export function AvatarPicker({
             type="button"
             onClick={() => choose(id)}
             disabled={pending}
-            title={id || "Auto"}
+            title={id ? avatarLabel(id) : "Auto"}
             className={`rounded-md border-2 p-0.5 transition-colors ${
               selected === id ? "border-brass" : "border-transparent hover:border-parchment-dark"
             }`}
