@@ -3,23 +3,28 @@
 import { useState, useTransition } from "react";
 import { setSave } from "@/app/actions";
 
-// Bookmark toggle. The bookmark fills when saved. Guests can't save.
+// Bookmark toggle with a public count. The bookmark fills when saved. Guests
+// see the count but can't save.
 export function SaveButton({
   postId,
   initialSaved,
+  initialCount,
   canSave,
 }: {
   postId: string;
   initialSaved: boolean;
+  initialCount: number;
   canSave: boolean;
 }) {
   const [saved, setSaved] = useState(initialSaved);
+  const [count, setCount] = useState(initialCount);
   const [, startTransition] = useTransition();
 
   function toggle() {
     if (!canSave) return;
     const next = !saved;
     setSaved(next);
+    setCount((c) => Math.max(0, c + (next ? 1 : -1)));
     startTransition(async () => {
       await setSave(postId, next);
     });
@@ -32,7 +37,7 @@ export function SaveButton({
       disabled={!canSave}
       aria-pressed={saved}
       title={saved ? "Saved" : "Save read"}
-      className={`transition-colors ${
+      className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
         saved ? "text-brass" : "text-ink-faint"
       } ${canSave ? "hover:text-brass" : "cursor-default"}`}
     >
@@ -47,6 +52,7 @@ export function SaveButton({
       >
         <path d="M2.5 1.5h9v13l-4.5-3.2-4.5 3.2z" strokeLinejoin="round" />
       </svg>
+      {count}
     </button>
   );
 }

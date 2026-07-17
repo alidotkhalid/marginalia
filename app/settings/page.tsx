@@ -67,9 +67,6 @@ export default async function SettingsPage() {
           <Link href="/saved" className="link">
             Saved reads →
           </Link>
-          <Link href="/liked" className="link">
-            Reads you&rsquo;ve liked →
-          </Link>
           <Link href="/asks" className="link">
             Asks{askCount ? ` (${askCount})` : ""} →
           </Link>

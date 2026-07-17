@@ -305,27 +305,6 @@ create policy "target or asker delete asks"
   on public.asks for delete using (auth.uid() = target_id or auth.uid() = asker_id);
 
 -- ============================================================================
--- LIKES — hearts on posts.
--- ============================================================================
-create table if not exists public.likes (
-  post_id     uuid not null references public.posts (id) on delete cascade,
-  user_id     uuid not null references public.profiles (id) on delete cascade,
-  created_at  timestamptz not null default now(),
-  primary key (post_id, user_id)
-);
-
-create index if not exists likes_post_idx on public.likes (post_id);
-
-alter table public.likes enable row level security;
-
-create policy "likes are viewable by everyone"
-  on public.likes for select using (true);
-create policy "users like on their own behalf"
-  on public.likes for insert to authenticated with check (auth.uid() = user_id);
-create policy "users unlike on their own behalf"
-  on public.likes for delete using (auth.uid() = user_id);
-
--- ============================================================================
 -- SAVES — private bookmarks of reads.
 -- ============================================================================
 create table if not exists public.saves (
@@ -345,6 +324,12 @@ create policy "owners save on their own behalf"
   on public.saves for insert to authenticated with check (auth.uid() = user_id);
 create policy "owners unsave on their own behalf"
   on public.saves for delete using (auth.uid() = user_id);
+
+-- Public save count (bypasses owner-only RLS to count, without exposing who).
+create or replace function public.count_saves(pid uuid)
+returns int language sql security definer set search_path = public stable as $$
+  select count(*)::int from public.saves where post_id = pid;
+$$;
 
 -- ============================================================================
 -- COMMENT_VOTES — upvote/downvote on comments.
@@ -499,11 +484,7 @@ with (security_invoker = true) as
     p.text_review,
     p.answer_question,
     p.answer_asker,
-    (select count(*) from public.likes lk where lk.post_id = p.id)::int as like_count,
-    exists (
-      select 1 from public.likes lk
-      where lk.post_id = p.id and lk.user_id = auth.uid()
-    ) as liked_by_me,
+    public.count_saves(p.id) as save_count,
     exists (
       select 1 from public.saves sv
       where sv.post_id = p.id and sv.user_id = auth.uid()

@@ -4,7 +4,6 @@ import { Avatar } from "./Avatar";
 import { Comments } from "./Comments";
 import { PostContent } from "./PostContent";
 import { FollowButton } from "./FollowButton";
-import { LikeButton } from "./LikeButton";
 import { SaveButton } from "./SaveButton";
 import type { FollowStatus } from "@/app/actions";
 
@@ -25,8 +24,7 @@ export type FeedPost = {
   text_review: string | null;
   answer_question: string | null;
   answer_asker: string | null;
-  like_count: number;
-  liked_by_me: boolean;
+  save_count: number;
   saved_by_me: boolean;
 };
 
@@ -137,19 +135,12 @@ export function PostCard({
         count={post.comment_count ?? 0}
         currentUserId={currentUserId}
         actions={
-          <>
-            <LikeButton
-              postId={post.id}
-              initialLiked={!!post.liked_by_me}
-              initialCount={post.like_count ?? 0}
-              canLike={!!currentUserId}
-            />
-            <SaveButton
-              postId={post.id}
-              initialSaved={!!post.saved_by_me}
-              canSave={!!currentUserId}
-            />
-          </>
+          <SaveButton
+            postId={post.id}
+            initialSaved={!!post.saved_by_me}
+            initialCount={post.save_count ?? 0}
+            canSave={!!currentUserId}
+          />
         }
       />
     </article>
