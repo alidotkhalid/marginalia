@@ -60,11 +60,12 @@
            focus:border-brass focus:ring-2 focus:ring-brass/25;
   }
 
-  /* Avatar frame. The avatar PNGs are rounded tiles with transparent corners,
-     so the wrapper stays transparent (no dark fill / no ring) to avoid the
-     little black notches the corners used to show. */
+  /* Avatar frame. The avatar PNGs are rounded tiles (13.5% corner radius) that
+     fill the frame edge-to-edge except at the transparent corners. We clip the
+     wrapper to the same rounded-square shape (a hair rounder, so the smooth clip
+     sits just inside the pixel-art corner) so no background shows in the corners. */
   .avatar {
-    @apply block shrink-0 select-none bg-transparent;
+    @apply block shrink-0 select-none overflow-hidden rounded-[15%] bg-transparent;
   }
 
   .stat-num {
