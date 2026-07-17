@@ -40,7 +40,7 @@ export async function searchBooks(
   );
 
   const res = await fetch(url, {
-    headers: { "User-Agent": "Marginalia/1.0 (reading social app)" },
+    headers: { "User-Agent": "Marginaly/1.0 (reading social app)" },
     // Cache identical searches for a minute at the edge.
     next: { revalidate: 60 },
   });
@@ -78,7 +78,7 @@ export async function booksBySubject(
   );
 
   const res = await fetch(url, {
-    headers: { "User-Agent": "Marginalia/1.0 (reading social app)" },
+    headers: { "User-Agent": "Marginaly/1.0 (reading social app)" },
     // Subject lists change slowly; cache for an hour at the edge.
     next: { revalidate: 3600 },
   });
@@ -115,7 +115,7 @@ export async function booksByAuthor(
   );
 
   const res = await fetch(url, {
-    headers: { "User-Agent": "Marginalia/1.0 (reading social app)" },
+    headers: { "User-Agent": "Marginaly/1.0 (reading social app)" },
     next: { revalidate: 3600 },
   });
   if (!res.ok) return [];

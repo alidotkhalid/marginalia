@@ -9,7 +9,7 @@ export default function SignupPage({
   return (
     <div className="mx-auto max-w-sm py-6">
       <h1 className="mb-1 font-display text-3xl font-bold text-cream">
-        Join Marginalia
+        Join Marginaly
       </h1>
       <p className="mb-6 text-sm text-cream-soft">
         A quiet corner for readers. No feed algorithms, ever.

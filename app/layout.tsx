@@ -3,11 +3,12 @@ import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
+import { Logo } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
 import { signOut } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Marginalia",
+  title: "Marginaly",
   description:
     "A distraction-free, text-first social network for book lovers. No algorithms, no video, no infinite scroll.",
 };
@@ -54,7 +55,7 @@ export default async function RootLayout({
               href="/"
               className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-ink no-underline hover:text-brass"
             >
-              <span className="text-brass">❦</span> Marginalia
+              <Logo /> Marginaly
             </Link>
 
             <nav className="flex items-center gap-5 text-sm">
@@ -93,7 +94,7 @@ export default async function RootLayout({
 
         <footer className="mx-auto max-w-shell px-4 py-10 text-center text-xs text-cream-soft sm:px-6">
           <hr className="rule mb-4" />
-          Marginalia · read deliberately
+          Marginaly · read deliberately
         </footer>
       </body>
     </html>
