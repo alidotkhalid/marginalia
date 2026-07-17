@@ -94,6 +94,40 @@ export async function booksBySubject(
     }));
 }
 
+/** Fetch books written by an author name (used by the Books tab's author search). */
+export async function booksByAuthor(
+  name: string,
+  limit = 30
+): Promise<BookResult[]> {
+  const term = name.trim();
+  if (!term) return [];
+
+  const url = new URL("https://openlibrary.org/search.json");
+  url.searchParams.set("author", term);
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set(
+    "fields",
+    "key,title,author_name,cover_i,first_publish_year"
+  );
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Marginalia/1.0 (reading social app)" },
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) return [];
+
+  const data = (await res.json()) as { docs?: RawDoc[] };
+  return (data.docs ?? [])
+    .filter((doc) => doc.cover_i)
+    .map((doc) => ({
+      olid: doc.key.replace("/works/", ""),
+      title: doc.title,
+      author: doc.author_name?.[0] ?? null,
+      coverId: doc.cover_i ?? null,
+      firstYear: doc.first_publish_year ?? null,
+    }));
+}
+
 /**
  * Build a cover-art URL from an Open Library cover id.
  * size: S | M | L. Returns null if there is no cover.
