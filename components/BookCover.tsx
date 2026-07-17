@@ -2,7 +2,7 @@ import Image from "next/image";
 import { coverUrl } from "@/lib/openlibrary";
 
 // Renders Open Library cover art, or a typographic placeholder "spine" when a
-// book has no cover on file. Never renders user-uploaded imagery — by design.
+// book has no cover on file. Never renders user-uploaded imagery, by design.
 export function BookCover({
   coverId,
   title,

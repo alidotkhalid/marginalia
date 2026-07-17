@@ -48,8 +48,8 @@ async function upsertBook(
 }
 
 /**
- * Create a post. A post can carry up to three text sections — note, quote,
- * review — each drawn from the composer's tabs. `book` is the JSON-serialized
+ * Create a post. A post can carry up to three text sections (note, quote,
+ * review), each drawn from the composer's tabs. `book` is the JSON-serialized
  * BookResult. At least one section must be non-empty.
  */
 export async function createPost(formData: FormData) {

@@ -175,7 +175,7 @@ export function RoomLive({
         <button
           type="button"
           onClick={toggleMute}
-          title={muted ? "Chime muted — tap to unmute" : "Mute the chime"}
+          title={muted ? "Chime muted. Tap to unmute" : "Mute the chime"}
           aria-label={muted ? "Unmute chime" : "Mute chime"}
           className="absolute right-3 top-3 text-ink-faint hover:text-brass"
         >

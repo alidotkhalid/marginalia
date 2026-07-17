@@ -13,7 +13,7 @@ type RequestRow = {
   } | null;
 };
 
-// Incoming follow requests for private accounts — approve or decline each.
+// Incoming follow requests for private accounts. Approve or decline each.
 export default async function RequestsPage() {
   const supabase = createClient();
   const {

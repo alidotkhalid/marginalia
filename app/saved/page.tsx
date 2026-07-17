@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PostCard, type FeedPost } from "@/components/PostCard";
 import type { FollowStatus } from "@/app/actions";
 
-// "Saved Reads" — every read the user has bookmarked. The bookmark on each card
+// "Saved Reads": every read the user has bookmarked. The bookmark on each card
 // removes it here.
 export default async function SavedPage() {
   const supabase = createClient();

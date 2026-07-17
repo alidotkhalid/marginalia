@@ -42,7 +42,7 @@ export function AskReplyForm({ askId }: { askId: string }) {
         onChange={(e) => setText(e.target.value)}
         maxLength={2000}
         rows={3}
-        placeholder="Write your reply — it'll be posted on your profile…"
+        placeholder="Write your reply, it'll be posted on your profile…"
         className="input resize-none text-sm"
       />
       {error && <p className="text-sm text-oxblood">{error}</p>}

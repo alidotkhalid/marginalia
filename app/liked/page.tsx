@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PostCard, type FeedPost } from "@/components/PostCard";
 import type { FollowStatus } from "@/app/actions";
 
-// "Reads you have liked" — every read (post) the user has hearted. The like
+// "Reads you have liked": every read (post) the user has hearted. The like
 // button on each card lets them unlike right from here.
 export default async function LikedPage() {
   const supabase = createClient();

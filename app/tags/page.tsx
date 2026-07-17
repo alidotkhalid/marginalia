@@ -5,7 +5,7 @@ import { PostCard, type FeedPost } from "@/components/PostCard";
 import type { FollowStatus } from "@/app/actions";
 import { genreLabel } from "@/lib/genres";
 
-// "Tags you follow" — reads tagged with any genre the reader follows.
+// "Tags you follow": reads tagged with any genre the reader follows.
 export default async function TagsPage() {
   const supabase = createClient();
   const {

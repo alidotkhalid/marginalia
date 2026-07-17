@@ -4,7 +4,7 @@ import { PostComposer, type DraftInit } from "@/components/PostComposer";
 import { PostCard, type FeedPost } from "@/components/PostCard";
 import type { BookResult } from "@/lib/openlibrary";
 
-// The Feed — a strictly chronological timeline of notes from people you follow
+// The Feed: a strictly chronological timeline of notes from people you follow
 // (plus your own). No ranking, no recommendations, no infinite scroll.
 export default async function FeedPage({
   searchParams,
@@ -114,7 +114,7 @@ export default async function FeedPage({
           </span>
           {readersNow && readersNow > 0
             ? `${readersNow} ${readersNow === 1 ? "reader is" : "readers are"} reading in rooms right now`
-            : "No one in the rooms yet — open one"}
+            : "No one in the rooms yet. Open one"}
         </span>
         <span className="font-mono text-xs text-brass">Rooms →</span>
       </Link>

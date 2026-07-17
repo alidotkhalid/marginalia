@@ -53,7 +53,7 @@ export default async function BooksPage({
       <div>
         <h1 className="mb-1 font-display text-3xl font-bold text-cream">Books</h1>
         <p className="text-sm text-cream-soft">
-          Discover your next read — browse by genre or by mood.
+          Discover your next read. Browse by genre or by mood.
         </p>
       </div>
 

@@ -41,7 +41,7 @@ export default async function RoomsPage() {
           Reading rooms
         </h1>
         <p className="text-sm text-cream-soft">
-          Sit and read alongside others. A shared timer, a quiet room, no camera —
+          Sit and read alongside others. A shared timer, a quiet room, no camera,
           just company.
         </p>
       </div>

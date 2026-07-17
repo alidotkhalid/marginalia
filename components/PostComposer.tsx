@@ -22,7 +22,7 @@ export type DraftInit = {
 };
 
 // The core writing surface: attach a book, pick a kind, write within a strict
-// character budget. Can be loaded from — and saved back to — a draft.
+// character budget. Can be loaded from, and saved back to, a draft.
 export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
   const router = useRouter();
   const [book, setBook] = useState<BookResult | null>(initialDraft?.book ?? null);
@@ -173,7 +173,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         className="input resize-none leading-relaxed"
       />
 
-      {/* Kind selector — note / quote / review */}
+      {/* Kind selector: note / quote / review */}
       <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider">
         {(["note", "quote", "review"] as Kind[]).map((k) => (
           <button
@@ -191,7 +191,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
           </button>
         ))}
 
-        {/* Genre dropdown — becomes a clickable hashtag on the post */}
+        {/* Genre dropdown: becomes a clickable hashtag on the post */}
         <span className="relative ml-auto inline-flex items-center">
           <select
             value={genre}

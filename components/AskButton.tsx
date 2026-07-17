@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { askReader } from "@/app/actions";
 import { Spinner } from "./Spinner";
 
-// "Ask the reader" — a follow-gated question box shown on a profile you follow.
+// "Ask the reader": a follow-gated question box shown on a profile you follow.
 export function AskButton({ targetId }: { targetId: string }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");

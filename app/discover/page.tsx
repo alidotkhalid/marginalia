@@ -17,7 +17,7 @@ type ReaderRow = {
   books: { title: string; author: string | null; cover_id: number | null } | null;
 };
 
-// Plain GET form — navigating to /discover?q=… triggers the loading spinner and
+// Plain GET form. Navigating to /discover?q=… triggers the loading spinner and
 // re-renders server-side. No client JS needed.
 function SearchForm({ defaultValue }: { defaultValue: string }) {
   return (
