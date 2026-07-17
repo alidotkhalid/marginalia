@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { booksBySubject, booksByAuthor, type BookResult } from "@/lib/openlibrary";
-import { BookTile } from "@/components/BookTile";
+import { BooksGrid } from "@/components/BooksGrid";
 import { GENRES } from "@/lib/genres";
 import {
   MOODS,
@@ -136,11 +136,13 @@ export default async function BooksPage({
                 : "Couldn't find books for this right now. Try another."}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
-              {books.map((b) => (
-                <BookTile key={b.olid} book={b} canAct={!!user} />
-              ))}
-            </div>
+            <BooksGrid
+              initial={books}
+              by={by}
+              tag={activeTag}
+              author={authorQuery}
+              canAct={!!user}
+            />
           )}
         </>
       )}

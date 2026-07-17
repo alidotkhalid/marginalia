@@ -3,9 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { BookResult } from "@/lib/openlibrary";
+import {
+  booksBySubject,
+  booksByAuthor,
+  type BookResult,
+} from "@/lib/openlibrary";
 import { postLimit } from "@/lib/constants";
 import { isGenre } from "@/lib/genres";
+import { subjectForGenre, subjectForMood } from "@/lib/books";
 import { isAvatarIcon } from "@/lib/avatarIcons";
 import type { CommentRow } from "@/lib/comments";
 
@@ -642,6 +647,24 @@ export async function signOut() {
   const supabase = createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/** Fetch another page of books for the Books tab's infinite scroll. */
+export async function fetchMoreBooks(params: {
+  by: string;
+  tag: string;
+  author: string;
+  page: number;
+}): Promise<BookResult[]> {
+  const page = Math.max(1, Math.min(20, Math.round(params.page)));
+  if (params.by === "author") {
+    return params.author ? booksByAuthor(params.author, 30, page) : [];
+  }
+  const subject =
+    params.by === "mood"
+      ? subjectForMood(params.tag)
+      : subjectForGenre(params.tag);
+  return booksBySubject(subject, 30, page);
 }
 
 // ---------------------------------------------------------------------------

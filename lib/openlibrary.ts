@@ -62,7 +62,8 @@ export async function searchBooks(
  */
 export async function booksBySubject(
   subject: string,
-  limit = 30
+  limit = 30,
+  page = 1
 ): Promise<BookResult[]> {
   const term = subject.trim();
   if (!term) return [];
@@ -70,6 +71,7 @@ export async function booksBySubject(
   const url = new URL("https://openlibrary.org/search.json");
   url.searchParams.set("subject", term);
   url.searchParams.set("limit", String(limit));
+  url.searchParams.set("page", String(Math.max(1, page)));
   url.searchParams.set(
     "fields",
     "key,title,author_name,cover_i,first_publish_year"
@@ -97,7 +99,8 @@ export async function booksBySubject(
 /** Fetch books written by an author name (used by the Books tab's author search). */
 export async function booksByAuthor(
   name: string,
-  limit = 30
+  limit = 30,
+  page = 1
 ): Promise<BookResult[]> {
   const term = name.trim();
   if (!term) return [];
@@ -105,6 +108,7 @@ export async function booksByAuthor(
   const url = new URL("https://openlibrary.org/search.json");
   url.searchParams.set("author", term);
   url.searchParams.set("limit", String(limit));
+  url.searchParams.set("page", String(Math.max(1, page)));
   url.searchParams.set(
     "fields",
     "key,title,author_name,cover_i,first_publish_year"
