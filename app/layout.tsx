@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
+import { NavLinks } from "@/components/NavLinks";
 import { signOut } from "./actions";
 
 export const metadata: Metadata = {
@@ -59,56 +60,7 @@ export default async function RootLayout({
             <nav className="flex items-center gap-5 text-sm">
               {user ? (
                 <>
-                  <Link href="/" className="font-medium text-ink-soft hover:text-brass">
-                    Home
-                  </Link>
-                  <Link
-                    href="/discover"
-                    className="font-medium text-ink-soft hover:text-brass"
-                  >
-                    Discover
-                  </Link>
-                  <Link
-                    href="/tags"
-                    className="font-medium text-ink-soft hover:text-brass"
-                  >
-                    Tags
-                  </Link>
-                  <Link
-                    href="/rooms"
-                    className="font-medium text-ink-soft hover:text-brass"
-                  >
-                    Rooms
-                  </Link>
-                  <Link
-                    href="/books"
-                    className="font-medium text-ink-soft hover:text-brass"
-                  >
-                    Books
-                  </Link>
-                  <Link
-                    href="/requests"
-                    className="relative font-medium text-ink-soft hover:text-brass"
-                  >
-                    Requests
-                    {pendingRequests > 0 && (
-                      <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-pill bg-oxblood px-1 text-[10px] font-bold text-cream">
-                        {pendingRequests}
-                      </span>
-                    )}
-                  </Link>
-                  <Link
-                    href="/customize"
-                    className="font-medium text-ink-soft hover:text-brass"
-                  >
-                    Customize
-                  </Link>
-                  <Link
-                    href="/settings"
-                    className="font-medium text-ink-soft hover:text-brass"
-                  >
-                    Settings
-                  </Link>
+                  <NavLinks pendingRequests={pendingRequests} />
                   <form action={signOut}>
                     <button
                       className="font-medium text-ink-faint hover:text-oxblood"
