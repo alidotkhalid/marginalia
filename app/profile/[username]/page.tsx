@@ -174,13 +174,13 @@ export default async function ProfilePage({
 
             <div className="flex items-center gap-6 pb-1">
               <div className="text-center">
-                <span className="stat-num" style={{ color: accent }}>
+                <span className="stat-num text-ink">
                   {followers ?? 0}
                 </span>
                 <span className="stat-label">Followers</span>
               </div>
               <div className="text-center">
-                <span className="stat-num" style={{ color: accent }}>
+                <span className="stat-num text-ink">
                   {following ?? 0}
                 </span>
                 <span className="stat-label">Following</span>
@@ -278,11 +278,8 @@ export default async function ProfilePage({
           </aside>
 
           <section className="space-y-4">
-            <div
-              className="flex items-center gap-4 border-b-2 pb-1"
-              style={{ borderColor: accent }}
-            >
-              <span className="pb-1 text-sm font-semibold text-cream">Reads</span>
+            <div className="flex items-center gap-4 pb-1">
+              <span className="text-sm font-semibold text-cream">Reads</span>
             </div>
             {feed.length === 0 ? (
               <div className="card p-6 text-center">
