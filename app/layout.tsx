@@ -81,6 +81,12 @@ export default async function RootLayout({
                     Rooms
                   </Link>
                   <Link
+                    href="/books"
+                    className="font-medium text-ink-soft hover:text-brass"
+                  >
+                    Books
+                  </Link>
+                  <Link
                     href="/requests"
                     className="relative font-medium text-ink-soft hover:text-brass"
                   >
