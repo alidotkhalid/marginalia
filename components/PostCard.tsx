@@ -70,16 +70,136 @@ export function PostCard({
   currentUserId,
   followStatus,
   compact = false,
+  variant = "default",
 }: {
   post: FeedPost;
   currentUserId?: string;
   followStatus?: FollowStatus;
   compact?: boolean;
+  variant?: "default" | "feed";
 }) {
   const isOwn = !!currentUserId && currentUserId === post.author_id;
   const showFollow =
     !compact && !!currentUserId && !isOwn && (followStatus ?? "none") !== "accepted";
   const kind: PostKind = post.kind ?? "note";
+
+  // Home feed layout: author on the left, kind badge on the right, the book as
+  // an inset chip, and quotes set large in the display serif.
+  if (variant === "feed") {
+    const quote = kind === "quote" ? post.text_quote : null;
+
+    return (
+      <article className="card p-5">
+        <header className="mb-4 flex items-start gap-3">
+          <Link href={`/profile/${post.author_username}`}>
+            <Avatar
+              name={post.author_display_name ?? post.author_username}
+              icon={post.author_avatar_icon}
+              size={40}
+            />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/profile/${post.author_username}`}
+              className="font-semibold text-ink no-underline hover:text-brass"
+            >
+              {post.author_display_name ?? post.author_username}
+            </Link>
+            <p className="font-mono text-xs text-ink-faint">
+              @{post.author_username} · {timeAgo(post.created_at)}
+            </p>
+          </div>
+          <span className="kind-badge shrink-0 rounded-[4px] border border-brass/30 bg-brass/10 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-brass">
+            {kind}
+          </span>
+        </header>
+
+        {post.answer_question && (
+          <div className="mb-3 rounded-card border border-brass/30 bg-brass/5 p-3">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-brass">
+              Ask
+              {post.answer_asker && (
+                <>
+                  {" · "}
+                  <Link href={`/profile/${post.answer_asker}`} className="link">
+                    @{post.answer_asker}
+                  </Link>
+                </>
+              )}
+            </p>
+            <p className="mt-1 italic text-ink-soft">{post.answer_question}</p>
+          </div>
+        )}
+
+        {quote ? (
+          /* A quote carries itself; the book is credited underneath. */
+          <>
+            <blockquote className="font-display text-xl italic leading-relaxed text-ink">
+              &ldquo;{quote}&rdquo;
+            </blockquote>
+            {post.book_title && (
+              <p className="mt-3 text-sm text-ink-faint">
+                {post.book_author ? `${post.book_author} · ` : ""}
+                {post.book_title}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            {post.book_title && (
+              <div className="mb-4 flex items-center gap-3 rounded-card bg-parchment-light p-3">
+                <BookCover
+                  coverId={post.book_cover_id}
+                  title={post.book_title}
+                  size="S"
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-display font-semibold text-ink">
+                    {post.book_title}
+                  </p>
+                  <p className="truncate text-sm text-ink-faint">
+                    {post.book_author ?? "Unknown author"}
+                  </p>
+                </div>
+              </div>
+            )}
+            {kind === "review" && !!post.rating && (
+              <div className="mb-2">
+                <StarRating value={post.rating} />
+              </div>
+            )}
+          </>
+        )}
+
+        <div className={quote ? "mt-3" : ""}>
+          <PostContent
+            postId={post.id}
+            kind={kind}
+            note={post.text_note}
+            quote={null}
+            review={post.text_review}
+            rating={post.rating}
+            genre={post.genre}
+            isOwner={isOwn}
+          />
+        </div>
+
+        <Comments
+          postId={post.id}
+          count={post.comment_count ?? 0}
+          currentUserId={currentUserId}
+          actions={
+            <SaveButton
+              postId={post.id}
+              initialSaved={!!post.saved_by_me}
+              initialCount={post.save_count ?? 0}
+              canSave={!!currentUserId}
+            />
+          }
+        />
+      </article>
+    );
+  }
 
   return (
     <article className="card p-5">
