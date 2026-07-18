@@ -123,10 +123,10 @@ export function RoomsBrowser({ rooms }: { rooms: RoomCard[] }) {
         <ul className="grid gap-5 md:grid-cols-2">
           {shown.map((r) => (
             <li key={r.id}>
-              <Link
-                href={`/rooms/${r.id}`}
-                className="card block p-5 no-underline transition-colors hover:border-brass/40"
-              >
+              {/* The card itself does not navigate: joining is a deliberate
+                  click on the Join button, so nobody lands in a room by
+                  accident. */}
+              <div className="card block p-5 transition-colors hover:border-brass/40">
                 {/* The stack of books being read here */}
                 <div className="flex h-[72px] items-end">
                   {r.covers.slice(0, 4).map((c, i) => (
@@ -170,7 +170,7 @@ export function RoomsBrowser({ rooms }: { rooms: RoomCard[] }) {
 
                 <hr className="my-4 border-0 border-t border-white/[0.06]" />
 
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="flex">
                       {r.people.slice(0, 3).map((p, i) => (
@@ -194,11 +194,20 @@ export function RoomsBrowser({ rooms }: { rooms: RoomCard[] }) {
                         : "quiet right now"}
                     </span>
                   </div>
-                  <span className="font-mono text-xs text-ink-faint">
-                    {r.avgMinutes > 0 ? `${r.avgMinutes} min avg` : "new room"}
-                  </span>
+
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-xs text-ink-faint">
+                      {r.avgMinutes > 0 ? `${r.avgMinutes} min avg` : "new room"}
+                    </span>
+                    <Link
+                      href={`/rooms/${r.id}`}
+                      className="btn-ghost !py-1.5 text-sm no-underline hover:!border-brass hover:text-brass"
+                    >
+                      Join
+                    </Link>
+                  </div>
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>
