@@ -13,18 +13,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Canvas + deep surfaces / primary buttons (warm dark walnut)
+        // Canvas + deep surfaces / primary buttons (deep forest black)
         forest: {
-          deep: "#120e08",
-          dark: "#1a1610", // page background
-          DEFAULT: "#4a3826", // primary buttons, avatar frame
-          light: "#5e4832", // hover
+          deep: "#0b0f0c",
+          dark: "#0F1310", // page background
+          DEFAULT: "#232d25", // primary buttons, placeholders
+          light: "#2e3a30", // hover
         },
-        // Card surfaces (dark walnut, slightly above the canvas)
+        // Card / tab surfaces, one step above the canvas
         parchment: {
-          DEFAULT: "#241d13",
-          light: "#2d2517", // inputs / raised surfaces
-          dark: "#3c3020", // borders
+          DEFAULT: "#161C17",
+          light: "#1c231d", // inputs / raised surfaces
+          dark: "#27302a", // borders
         },
         // Text on cards (warm cream)
         ink: {

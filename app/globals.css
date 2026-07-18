@@ -12,12 +12,8 @@
     @apply bg-forest-dark text-cream font-sans antialiased;
     font-size: 0.975rem;
     line-height: 1.6;
-    background-image: radial-gradient(
-      120% 80% at 50% -10%,
-      rgba(201, 164, 79, 0.12),
-      transparent 60%
-    );
-    background-attachment: fixed;
+    /* Flat canvas, as in the reference. */
+    background-image: none;
   }
   h1, h2, h3, h4 {
     @apply font-display;
@@ -73,7 +69,7 @@
      The active pill gets a soft gold wash.
      ------------------------------------------------------------------------ */
   .site-nav {
-    background-color: rgba(10, 10, 9, 0.92);
+    background-color: rgba(15, 19, 16, 0.92); /* #0F1310 */
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(8px);
   }
@@ -108,24 +104,24 @@
      pages keep the walnut palette until they are redesigned too.
      ------------------------------------------------------------------------ */
   .profile-theme {
-    background-color: #0d0d0b;
+    background-color: #0f1310;
     background-image: none;
-    @apply rounded-card p-4 sm:p-6;
+    @apply p-0;
     color: #ece7db;
   }
   .profile-theme .card {
-    background-color: #131311;
+    background-color: #161c17;
     border-color: rgba(255, 255, 255, 0.06);
     @apply shadow-none;
   }
   /* Cards nested inside a card (composer chips, book rows) sit one step up. */
   .profile-theme .card .card {
-    background-color: #1a1a17;
+    background-color: #1c231d;
   }
   .profile-theme .input,
   .profile-theme select,
   .profile-theme textarea {
-    background-color: #1a1a17;
+    background-color: #1c231d;
     border-color: rgba(255, 255, 255, 0.09);
     color: #ece7db;
   }
@@ -144,10 +140,14 @@
   .profile-theme .text-brass { color: #c9a961; }
   .profile-theme .text-brass-light { color: #dcc078; }
 
-  /* The streak card carries a faint green cast, as in the reference */
+  /* The one gradient on the page: the day-streak card fades from the tab
+     colour down to the canvas colour. */
+  .streak-card {
+    background-image: linear-gradient(135deg, #161c17 0%, #0f1310 100%);
+    border-color: rgba(201, 169, 97, 0.16);
+  }
   .profile-theme .streak-card {
-    background-color: #10160f;
-    border-color: rgba(201, 169, 97, 0.14);
+    background-color: transparent;
   }
 
   /* Type badge on a read: NOTE / QUOTE / REVIEW */
@@ -160,13 +160,13 @@
   /* Profile tab bar: same pill language as the site nav */
   .profile-tab {
     @apply inline-flex items-center rounded-pill px-5 py-2 text-sm transition-colors;
-    background-color: #171714;
+    background-color: #161c17;
     color: #a8a294;
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
   .profile-tab:hover {
     color: #ece7db;
-    background-color: #1f1f1a;
+    background-color: #1c231d;
   }
   .profile-tab-active {
     background-color: #2b2517;
