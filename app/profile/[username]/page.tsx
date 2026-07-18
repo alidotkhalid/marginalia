@@ -10,8 +10,11 @@ import { AskButton } from "@/components/AskButton";
 import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
 import { EditableName } from "@/components/EditableName";
 import { EditableBio } from "@/components/EditableBio";
-import { ReadShelf, type ReadBook } from "@/components/ReadShelf";
-import { bannerBackground } from "@/lib/theme";
+import { Shelf } from "@/components/Shelf";
+import { StreakCard } from "@/components/StreakCard";
+import { ProfileTabs } from "@/components/ProfileTabs";
+import type { ReadBook } from "@/components/ReadShelf";
+import type { PostKind } from "@/lib/constants";
 import type { FollowStatus } from "@/app/actions";
 
 type CurrentBook = {
@@ -30,7 +33,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, username, display_name, bio, reading_progress, accent_color, banner_style, is_private, avatar_icon, books!currently_reading (title, author, cover_id)"
+      "id, username, display_name, bio, reading_progress, accent_color, is_private, avatar_icon, books!currently_reading (title, author, cover_id)"
     )
     .eq("username", params.username)
     .maybeSingle();
@@ -69,7 +72,6 @@ export default async function ProfilePage({
   }
 
   const accent = (profile.accent_color as string) ?? "#b1934f";
-  const banner = (profile.banner_style as string) ?? "gradient";
   const displayName = profile.display_name ?? profile.username;
   const isPrivate = (profile.is_private as boolean) ?? false;
   const canView = isSelf || !isPrivate || myStatus === "accepted";
@@ -104,26 +106,30 @@ export default async function ProfilePage({
 
   // Content is only fetched/shown when the viewer is allowed to see it.
   let feed: FeedPost[] = [];
-  let readShelf: ReadBook[] = [];
+  let shelf: ReadBook[] = [];
+  let streak = { current: 0, best: 0 };
   const currentBook = canView ? (profile.books as unknown as CurrentBook) : null;
   const progress = (profile.reading_progress as number) ?? 0;
 
   if (canView) {
-    const [{ data: posts }, { data: read }] = await Promise.all([
-      supabase
-        .from("feed_posts")
-        .select("*")
-        .eq("author_id", profile.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("read_books")
-        .select("book_id, finished_at, books ( title, author, cover_id )")
-        .eq("user_id", profile.id)
-        .order("finished_at", { ascending: false }),
-    ]);
+    const [{ data: posts }, { data: read }, { data: streakRows }] =
+      await Promise.all([
+        supabase
+          .from("feed_posts")
+          .select("*")
+          .eq("author_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("read_books")
+          .select("book_id, finished_at, books ( title, author, cover_id )")
+          .eq("user_id", profile.id)
+          .order("finished_at", { ascending: false }),
+        supabase.rpc("reading_streak", { uid: profile.id }),
+      ]);
+
     feed = (posts ?? []) as FeedPost[];
-    readShelf = (
+    shelf = (
       (read ?? []) as unknown as {
         book_id: string;
         books: {
@@ -138,94 +144,96 @@ export default async function ProfilePage({
       author: r.books?.author ?? null,
       cover_id: r.books?.cover_id ?? null,
     }));
+
+    const row = (
+      streakRows as unknown as { current_days: number; best_days: number }[] | null
+    )?.[0];
+    streak = { current: row?.current_days ?? 0, best: row?.best_days ?? 0 };
+  }
+
+  // Reads split by kind for the tab bar. Older multi-section reads fall back to
+  // whichever section they actually carry.
+  const kindOf = (p: FeedPost): PostKind =>
+    p.kind ?? (p.text_review ? "review" : p.text_quote ? "quote" : "note");
+  const byKind = (k: PostKind) => feed.filter((p) => kindOf(p) === k);
+  const reviews = byKind("review");
+  const quotes = byKind("quote");
+  const notes = byKind("note");
+
+  function readList(posts: FeedPost[], emptyLine: string) {
+    if (posts.length === 0) {
+      return (
+        <div className="card p-8 text-center">
+          <p className="font-display text-lg text-ink-soft">{emptyLine}</p>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-4">
+        {posts.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
+            currentUserId={user?.id}
+            followStatus={myStatus}
+            compact
+          />
+        ))}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* ---- Profile header ---- */}
-      <header className="card overflow-hidden">
-        <div
-          className="h-28 sm:h-32"
-          style={{ background: bannerBackground(accent, banner) }}
-        />
-        <div className="px-5 pb-5 sm:px-7">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex items-end gap-4">
-              <Avatar
-                name={displayName}
-                icon={(profile.avatar_icon as string | null) ?? null}
-                size={104}
-                className="-mt-12 !ring-4 !ring-parchment"
-              />
-              <div className="pb-1">
-                {isSelf ? (
-                  <EditableName current={displayName} />
-                ) : (
-                  <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
-                    {displayName}
-                  </h1>
-                )}
-                <p className="font-mono text-sm text-ink-faint">
-                  @{profile.username}
-                  {isPrivate && <span className="ml-2">🔒 Private</span>}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6 pb-1">
-              <div className="text-center">
-                <span className="stat-num text-ink">
-                  {followers ?? 0}
-                </span>
-                <span className="stat-label">Followers</span>
-              </div>
-              <div className="text-center">
-                <span className="stat-num text-ink">
-                  {following ?? 0}
-                </span>
-                <span className="stat-label">Following</span>
-              </div>
-              {!isSelf && user && (
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-2">
-                    {myStatus === "accepted" && <AskButton targetId={profile.id} />}
-                    <FollowButton targetId={profile.id} initialStatus={myStatus} />
-                  </div>
-                  <BlockButton targetId={profile.id} initialBlocked={iBlockedThem} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {isSelf ? (
-            <EditableBio current={(profile.bio as string | null) ?? null} />
-          ) : (
-            profile.bio && (
-              <p className="mt-4 max-w-prose text-ink-soft">{profile.bio}</p>
-            )
-          )}
-        </div>
-      </header>
-
-      {/* ---- Private gate for non-approved viewers ---- */}
+    <div className="profile-theme">
       {!canView ? (
-        <div className="card p-8 text-center">
-          <p className="font-display text-xl text-ink">🔒 This account is private</p>
-          <p className="mt-1 text-sm text-ink-faint">
-            {myStatus === "pending"
-              ? "Your follow request is pending approval."
-              : "Follow this reader to see their notes and reading."}
-          </p>
+        <div className="space-y-6">
+          <ProfileCard
+            profile={profile}
+            displayName={displayName}
+            isSelf={isSelf}
+            isPrivate={isPrivate}
+            followers={followers ?? 0}
+            following={following ?? 0}
+            booksRead={0}
+          />
+          <div className="card p-8 text-center">
+            <p className="font-display text-xl text-ink">
+              This account is private
+            </p>
+            <p className="mt-1 text-sm text-ink-faint">
+              {myStatus === "pending"
+                ? "Your follow request is pending approval."
+                : "Follow this reader to see their notes and reading."}
+            </p>
+            {user && (
+              <div className="mt-4 flex justify-center">
+                <FollowButton targetId={profile.id} initialStatus={myStatus} />
+              </div>
+            )}
+          </div>
         </div>
       ) : (
-        /* ---- Dashboard ---- */
         <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
+          {/* ---- Left rail ---- */}
           <aside className="space-y-6">
-            {isSelf && (
-              <section className="card p-5">
-                <h3 className="section-title mb-3 text-lg">Share a Read</h3>
-                <PostComposer />
-              </section>
+            <ProfileCard
+              profile={profile}
+              displayName={displayName}
+              isSelf={isSelf}
+              isPrivate={isPrivate}
+              followers={followers ?? 0}
+              following={following ?? 0}
+              booksRead={shelf.length}
+            />
+
+            {!isSelf && user && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  {myStatus === "accepted" && <AskButton targetId={profile.id} />}
+                  <FollowButton targetId={profile.id} initialStatus={myStatus} />
+                </div>
+                <BlockButton targetId={profile.id} initialBlocked={iBlockedThem} />
+              </div>
             )}
 
             <section className="card p-5">
@@ -233,7 +241,7 @@ export default async function ProfilePage({
                 <CurrentlyReadingEditor current={currentBook} progress={progress} />
               ) : (
                 <>
-                  <h3 className="section-title mb-3 text-lg">
+                  <h3 className="mb-3 font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
                     Currently Reading
                   </h3>
                   {currentBook ? (
@@ -253,56 +261,121 @@ export default async function ProfilePage({
                         <div className="progress mt-3">
                           <span style={{ width: `${progress}%`, background: accent }} />
                         </div>
-                        <span className="mt-1 block text-xs font-mono text-ink-faint">
+                        <span className="mt-1 block font-mono text-xs text-ink-faint">
                           {progress}% read
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-ink-faint">Not reading anything yet.</p>
+                    <p className="text-sm text-ink-faint">
+                      Not reading anything yet.
+                    </p>
                   )}
                 </>
               )}
             </section>
 
-            <section className="card p-5">
-              <h3 className="section-title mb-3 text-lg">
-                Books Read{" "}
-                <span className="font-mono text-xs text-ink-faint">
-                  ({readShelf.length})
-                </span>
-              </h3>
-              <ReadShelf books={readShelf} isSelf={isSelf} />
-            </section>
+            <StreakCard current={streak.current} best={streak.best} />
 
+            {isSelf && (
+              <section className="card p-5">
+                <h3 className="mb-3 font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+                  Share a Read
+                </h3>
+                <PostComposer />
+              </section>
+            )}
           </aside>
 
-          <section className="space-y-4">
-            <div className="flex items-center gap-4 pb-1">
-              <span className="text-sm font-semibold text-cream">Reads</span>
-            </div>
-            {feed.length === 0 ? (
-              <div className="card p-6 text-center">
-                <p className="font-display text-lg text-ink-soft">No reads yet.</p>
-                <p className="mt-1 text-sm text-ink-faint">
-                  {isSelf
-                    ? "Share your first read above."
-                    : "This reader hasn't shared any reads yet."}
-                </p>
-              </div>
-            ) : (
-              feed.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  currentUserId={user?.id}
-                  followStatus={myStatus}
-                />
-              ))
-            )}
-          </section>
+          {/* ---- Tabs ---- */}
+          <ProfileTabs
+            counts={{
+              shelf: shelf.length,
+              reviews: reviews.length,
+              quotes: quotes.length,
+              notes: notes.length,
+            }}
+            shelf={<Shelf books={shelf} isSelf={isSelf} />}
+            reviews={readList(reviews, "No reviews yet.")}
+            quotes={readList(quotes, "No quotes kept yet.")}
+            notes={readList(notes, "No notes yet.")}
+          />
         </div>
       )}
     </div>
+  );
+}
+
+/** The left-rail identity card: avatar, name, handle, bio, and the three stats. */
+function ProfileCard({
+  profile,
+  displayName,
+  isSelf,
+  isPrivate,
+  followers,
+  following,
+  booksRead,
+}: {
+  profile: Record<string, unknown>;
+  displayName: string;
+  isSelf: boolean;
+  isPrivate: boolean;
+  followers: number;
+  following: number;
+  booksRead: number;
+}) {
+  return (
+    <section className="card p-6 text-center">
+      <div className="flex justify-center">
+        <Avatar
+          name={displayName}
+          icon={(profile.avatar_icon as string | null) ?? null}
+          size={104}
+        />
+      </div>
+
+      <div className="mt-4">
+        {isSelf ? (
+          <div className="flex justify-center">
+            <EditableName current={displayName} />
+          </div>
+        ) : (
+          <h1 className="font-display text-3xl font-bold text-ink">
+            {displayName}
+          </h1>
+        )}
+        <p className="mt-0.5 font-mono text-sm text-ink-faint">
+          @{profile.username as string}
+          {isPrivate && <span className="ml-2">Private</span>}
+        </p>
+      </div>
+
+      {isSelf ? (
+        <EditableBio current={(profile.bio as string | null) ?? null} />
+      ) : (
+        !!profile.bio && (
+          <p className="mt-4 font-display text-sm italic leading-relaxed text-ink-soft">
+            {profile.bio as string}
+          </p>
+        )
+      )}
+
+      <hr className="my-5 border-0 border-t border-white/10" />
+
+      <div className="flex items-start justify-center gap-7">
+        <div>
+          <span className="stat-num text-ink">{followers}</span>
+          <span className="stat-label">Followers</span>
+        </div>
+        <div>
+          <span className="stat-num text-ink">{following}</span>
+          <span className="stat-label">Following</span>
+        </div>
+        <div>
+          <span className="stat-num text-ink">{booksRead}</span>
+          <span className="stat-label">Books</span>
+        </div>
+      </div>
+    </section>
   );
 }

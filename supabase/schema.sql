@@ -73,6 +73,8 @@ create table if not exists public.posts (
   body         text check (char_length(body) between 1 and 2000),
   kind         text not null default 'note'
                  check (kind in ('note', 'quote', 'review')),
+  -- Star rating (1 to 5), only meaningful on reviews.
+  rating       smallint check (rating is null or rating between 1 and 5),
   -- Genre tag (slug from the app's genre list), used for hashtag browsing.
   genre        text,
   -- When a post answers an "Ask", the question + asker are stored for display.
@@ -462,12 +464,15 @@ create trigger on_auth_user_created
 -- Returns posts authored by people the viewer follows, plus their own posts,
 -- newest first, with author + book fields joined in.
 -- ============================================================================
-create or replace view public.feed_posts
+drop view if exists public.feed_posts;
+
+create view public.feed_posts
 with (security_invoker = true) as
   select
     p.id,
     p.body,
     p.kind,
+    p.rating,
     p.created_at,
     p.author_id,
     prof.username      as author_username,
@@ -493,3 +498,134 @@ with (security_invoker = true) as
   join public.profiles prof on prof.id = p.author_id
   left join public.books b   on b.id = p.book_id
   order by p.created_at desc;
+
+-- ---------------------------------------------------------------------------
+-- Reading streaks
+-- A day counts if the reader posted a read, logged reading progress, finished a
+-- book, or sat in a reading room. Rows are written only by the definer triggers
+-- below, so clients get select access and nothing more.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.activity_days (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  day     date not null default (now() at time zone 'utc')::date,
+  primary key (user_id, day)
+);
+
+alter table public.activity_days enable row level security;
+
+drop policy if exists "activity readable by owner and followers" on public.activity_days;
+create policy "activity readable by owner and followers"
+  on public.activity_days for select
+  using (
+    user_id = auth.uid()
+    or public.is_profile_public(user_id)
+    or public.is_accepted_follower(user_id, auth.uid())
+  );
+
+create or replace function public.mark_active(uid uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.activity_days (user_id, day)
+  values (uid, (now() at time zone 'utc')::date)
+  on conflict (user_id, day) do nothing;
+$$;
+
+create or replace function public.handle_activity_post()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.mark_active(new.author_id);
+  return new;
+end;
+$$;
+
+drop trigger if exists on_post_activity on public.posts;
+create trigger on_post_activity
+  after insert on public.posts
+  for each row execute function public.handle_activity_post();
+
+create or replace function public.handle_activity_progress()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.reading_progress is distinct from old.reading_progress
+     or new.currently_reading is distinct from old.currently_reading then
+    perform public.mark_active(new.id);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_progress_activity on public.profiles;
+create trigger on_progress_activity
+  after update on public.profiles
+  for each row execute function public.handle_activity_progress();
+
+create or replace function public.handle_activity_room()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.mark_active(new.user_id);
+  return new;
+end;
+$$;
+
+drop trigger if exists on_room_activity on public.room_participants;
+create trigger on_room_activity
+  after insert on public.room_participants
+  for each row execute function public.handle_activity_room();
+
+drop trigger if exists on_read_book_activity on public.read_books;
+create trigger on_read_book_activity
+  after insert on public.read_books
+  for each row execute function public.handle_activity_room();
+
+-- Current streak: consecutive days ending today or yesterday.
+-- Best streak: longest run ever recorded.
+create or replace function public.reading_streak(uid uuid)
+returns table (current_days int, best_days int)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+begin
+  return query
+  with days as (
+    select day from public.activity_days where user_id = uid
+  ),
+  grouped as (
+    select day,
+           day - (row_number() over (order by day))::int as grp
+    from days
+  ),
+  runs as (
+    select grp, count(*)::int as len, max(day) as last_day
+    from grouped
+    group by grp
+  )
+  select
+    coalesce(
+      (select len from runs
+        where last_day >= today - 1
+        order by last_day desc
+        limit 1),
+      0
+    ) as current_days,
+    coalesce((select max(len) from runs), 0) as best_days;
+end;
+$$;

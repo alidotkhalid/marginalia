@@ -8,6 +8,7 @@ import { postLimit } from "@/lib/constants";
 import { GENRES } from "@/lib/genres";
 import { BookSearch } from "./BookSearch";
 import { BookCover } from "./BookCover";
+import { StarRating } from "./StarRating";
 import { Spinner } from "./Spinner";
 
 type Kind = "note" | "quote" | "review";
@@ -21,19 +22,33 @@ export type DraftInit = {
   book: BookResult | null;
 };
 
-// The core writing surface: attach a book, pick a kind, write within a strict
-// character budget. Can be loaded from, and saved back to, a draft.
+const KINDS: { key: Kind; label: string; blurb: string }[] = [
+  { key: "note", label: "Note", blurb: "A thought while reading" },
+  { key: "quote", label: "Quote", blurb: "A passage worth keeping" },
+  { key: "review", label: "Review", blurb: "What you made of it" },
+];
+
+// The core writing surface. A read is one thing: a note, a quote, or a review.
+// The reader picks which up front, attaches a book, and writes within a strict
+// character budget. Reviews can carry a star rating.
 export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
   const router = useRouter();
+
+  // A draft was written as one of the three kinds; reopen it as that kind.
+  const draftKind: Kind = initialDraft?.quote?.trim()
+    ? "quote"
+    : initialDraft?.review?.trim()
+    ? "review"
+    : "note";
+
   const [book, setBook] = useState<BookResult | null>(initialDraft?.book ?? null);
-  // Each kind keeps its own draft text, so switching tabs never overwrites what
-  // you wrote for another kind.
-  const [bodies, setBodies] = useState<Record<Kind, string>>({
-    note: initialDraft?.note ?? "",
-    quote: initialDraft?.quote ?? "",
-    review: initialDraft?.review ?? "",
-  });
-  const [kind, setKind] = useState<Kind>("note");
+  const [kind, setKind] = useState<Kind>(draftKind);
+  const [text, setText] = useState(
+    initialDraft
+      ? initialDraft[draftKind] ?? ""
+      : ""
+  );
+  const [rating, setRating] = useState(0);
   const [genre, setGenre] = useState(initialDraft?.genre ?? "");
   const [draftId, setDraftId] = useState<string | null>(initialDraft?.id ?? null);
   const [draftMsg, setDraftMsg] = useState<string | null>(null);
@@ -42,36 +57,32 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const body = bodies[kind];
-  const setBody = (val: string) =>
-    setBodies((prev) => ({ ...prev, [kind]: val }));
-
   const limit = postLimit(kind);
-  const remaining = limit - body.length;
+  const remaining = limit - text.length;
   const nearLimit = remaining <= 40;
+  const canSubmit = book !== null && text.trim().length > 0 && text.length <= limit;
 
-  const anyText = !!(
-    bodies.note.trim() ||
-    bodies.quote.trim() ||
-    bodies.review.trim()
-  );
-  const withinLimits =
-    bodies.note.length <= postLimit("note") &&
-    bodies.quote.length <= postLimit("quote") &&
-    bodies.review.length <= postLimit("review");
-  const canSubmit = book !== null && anyText && withinLimits;
+  function reset() {
+    setText("");
+    setBook(null);
+    setKind("note");
+    setRating(0);
+    setGenre("");
+    setDraftId(null);
+    setDraftMsg(null);
+  }
 
   function handleSubmit(formData: FormData) {
     setError(null);
     if (!book) {
-      setError("Attach a book to your post.");
+      setError("Attach a book to your read.");
       return;
     }
     formData.set("book", JSON.stringify(book));
-    formData.set("text_note", bodies.note);
-    formData.set("text_quote", bodies.quote);
-    formData.set("text_review", bodies.review);
+    formData.set("kind", kind);
+    formData.set("text", text);
     formData.set("genre", genre);
+    formData.set("rating", kind === "review" && rating > 0 ? String(rating) : "");
     setBusy("post");
     startTransition(async () => {
       const res = await createPost(formData);
@@ -79,12 +90,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         setError(res.error);
       } else {
         if (draftId) await deleteDraft(draftId);
-        setBodies({ note: "", quote: "", review: "" });
-        setBook(null);
-        setKind("note");
-        setGenre("");
-        setDraftId(null);
-        setDraftMsg(null);
+        reset();
       }
       setBusy(null);
     });
@@ -97,9 +103,9 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
     startTransition(async () => {
       const res = await saveDraft({
         id: draftId ?? undefined,
-        note: bodies.note,
-        quote: bodies.quote,
-        review: bodies.review,
+        note: kind === "note" ? text : "",
+        quote: kind === "quote" ? text : "",
+        review: kind === "review" ? text : "",
         genre,
         book,
       });
@@ -117,12 +123,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
     setBusy("delete");
     startTransition(async () => {
       if (draftId) await deleteDraft(draftId);
-      setBodies({ note: "", quote: "", review: "" });
-      setBook(null);
-      setKind("note");
-      setGenre("");
-      setDraftId(null);
-      setDraftMsg(null);
+      reset();
       setConfirmDelDraft(false);
       setBusy(null);
       router.replace("/");
@@ -131,7 +132,28 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
 
   return (
     <form action={handleSubmit}>
-      {/* Attached book, or the search box to pick one */}
+      {/* Step 1: what kind of read is this? */}
+      <div className="mb-3 grid grid-cols-3 gap-2">
+        {KINDS.map((k) => (
+          <button
+            key={k.key}
+            type="button"
+            onClick={() => setKind(k.key)}
+            title={k.blurb}
+            className={`rounded-card border px-2 py-2 text-center transition-colors ${
+              kind === k.key
+                ? "border-brass bg-brass/15 text-brass"
+                : "border-parchment-dark text-ink-faint hover:border-brass/50 hover:text-ink"
+            }`}
+          >
+            <span className="block font-mono text-[11px] uppercase tracking-wider">
+              {k.label}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Step 2: attach a book */}
       {book ? (
         <div className="mb-3 flex items-center gap-3 rounded-card border border-parchment-dark bg-parchment-light p-2">
           <BookCover coverId={book.coverId} title={book.title} size="S" />
@@ -157,10 +179,11 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
         </div>
       )}
 
+      {/* Step 3: write it */}
       <textarea
         name="body"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
         maxLength={limit}
         rows={kind === "review" ? 6 : 3}
         placeholder={
@@ -168,31 +191,24 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
             ? "Transcribe a passage worth keeping…"
             : kind === "review"
             ? "A few honest lines on what you thought…"
-            : "Share your latest read or thought…"
+            : "A thought from today's reading…"
         }
         className="input resize-none leading-relaxed"
       />
 
-      {/* Kind selector: note / quote / review */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider">
-        {(["note", "quote", "review"] as Kind[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setKind(k)}
-            className={`rounded-pill border px-2.5 py-0.5 transition-colors ${
-              kind === k
-                ? "border-forest bg-forest text-cream"
-                : "border-parchment-dark text-ink-faint hover:bg-parchment-dark"
-            }`}
-          >
-            {k}
-            {bodies[k].trim() && <span className="ml-1 text-brass">•</span>}
-          </button>
-        ))}
+      {/* Reviews carry a star rating */}
+      {kind === "review" && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">
+            Rating
+          </span>
+          <StarRating value={rating} onChange={setRating} size="md" />
+        </div>
+      )}
 
-        {/* Genre dropdown: becomes a clickable hashtag on the post */}
-        <span className="relative ml-auto inline-flex items-center">
+      {/* Genre dropdown: becomes a clickable hashtag on the read */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="relative inline-flex items-center">
           <select
             value={genre}
             onChange={(e) => setGenre(e.target.value)}
@@ -255,7 +271,7 @@ export function PostComposer({ initialDraft }: { initialDraft?: DraftInit }) {
           <button
             type="button"
             onClick={saveCurrentDraft}
-            disabled={pending || (!anyText && !book)}
+            disabled={pending || (!text.trim() && !book)}
             className="btn-ghost !py-2 text-sm"
           >
             {busy === "draft" && <Spinner inline />}

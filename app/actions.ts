@@ -8,7 +8,7 @@ import {
   booksByAuthor,
   type BookResult,
 } from "@/lib/openlibrary";
-import { postLimit } from "@/lib/constants";
+import { postLimit, type PostKind } from "@/lib/constants";
 import { isGenre } from "@/lib/genres";
 import { subjectForGenre, subjectForMood } from "@/lib/books";
 import { isAvatarIcon } from "@/lib/avatarIcons";
@@ -48,9 +48,21 @@ async function upsertBook(
 }
 
 /**
- * Create a post. A post can carry up to three text sections (note, quote,
- * review), each drawn from the composer's tabs. `book` is the JSON-serialized
- * BookResult. At least one section must be non-empty.
+ * Star rating, only kept on reviews. Anything outside 1 to 5 becomes null.
+ */
+function parseRating(
+  raw: FormDataEntryValue | number | null,
+  kind: PostKind
+): number | null {
+  if (kind !== "review") return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 5) return null;
+  return n;
+}
+
+/**
+ * Create a read. A read is exactly one kind: a note, a quote, or a review,
+ * chosen in the composer. `book` is the JSON-serialized BookResult.
  */
 export async function createPost(formData: FormData) {
   const supabase = createClient();
@@ -59,25 +71,20 @@ export async function createPost(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const clean = (v: FormDataEntryValue | null) => {
-    const s = String(v ?? "").trim();
-    return s.length ? s : null;
-  };
-  const note = clean(formData.get("text_note"));
-  const quote = clean(formData.get("text_quote"));
-  const review = clean(formData.get("text_review"));
+  // A read is exactly one thing: a note, a quote, or a review.
+  const kindRaw = String(formData.get("kind") ?? "note");
+  const kind: PostKind =
+    kindRaw === "quote" || kindRaw === "review" ? kindRaw : "note";
+  const text = String(formData.get("text") ?? "").trim();
   const genreRaw = String(formData.get("genre") ?? "");
   const genre = isGenre(genreRaw) ? genreRaw : null;
+  const rating = parseRating(formData.get("rating"), kind);
   const bookRaw = formData.get("book");
 
-  if (!note && !quote && !review) return { error: "Write something first." };
-  if (note && note.length > postLimit("note"))
-    return { error: `Keep your note under ${postLimit("note")} characters.` };
-  if (quote && quote.length > postLimit("quote"))
-    return { error: `Keep your quote under ${postLimit("quote")} characters.` };
-  if (review && review.length > postLimit("review"))
-    return { error: `Keep your review under ${postLimit("review")} characters.` };
-  if (!bookRaw) return { error: "Attach a book to your post." };
+  if (!text) return { error: "Write something first." };
+  if (text.length > postLimit(kind))
+    return { error: `Keep your ${kind} under ${postLimit(kind)} characters.` };
+  if (!bookRaw) return { error: "Attach a book to your read." };
 
   let bookId: string;
   try {
@@ -87,17 +94,16 @@ export async function createPost(formData: FormData) {
     return { error: "That book could not be attached. Try again." };
   }
 
-  // The primary (first non-empty) section fills the legacy body/kind columns.
-  const primaryKind = note ? "note" : quote ? "quote" : "review";
   const { error } = await supabase.from("posts").insert({
     author_id: user.id,
     book_id: bookId,
     genre,
-    kind: primaryKind,
-    body: note ?? quote ?? review,
-    text_note: note,
-    text_quote: quote,
-    text_review: review,
+    kind,
+    rating,
+    body: text,
+    text_note: kind === "note" ? text : null,
+    text_quote: kind === "quote" ? text : null,
+    text_review: kind === "review" ? text : null,
   });
 
   if (error) return { error: error.message };
@@ -106,10 +112,10 @@ export async function createPost(formData: FormData) {
   return { error: null };
 }
 
-/** Edit one of your own posts (its three sections + genre). RLS enforces owner. */
+/** Edit one of your own reads (its text, kind, rating, genre). RLS enforces owner. */
 export async function updatePost(
   postId: string,
-  sections: { note: string; quote: string; review: string; genre: string }
+  input: { kind: string; text: string; genre: string; rating?: number }
 ) {
   const supabase = createClient();
   const {
@@ -117,29 +123,26 @@ export async function updatePost(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const note = sections.note.trim() || null;
-  const quote = sections.quote.trim() || null;
-  const review = sections.review.trim() || null;
-  const genre = isGenre(sections.genre) ? sections.genre : null;
+  const kind: PostKind =
+    input.kind === "quote" || input.kind === "review" ? input.kind : "note";
+  const text = input.text.trim();
+  const genre = isGenre(input.genre) ? input.genre : null;
+  const rating = parseRating(input.rating ?? null, kind);
 
-  if (!note && !quote && !review) return { error: "Write something first." };
-  if (note && note.length > postLimit("note"))
-    return { error: `Keep your note under ${postLimit("note")} characters.` };
-  if (quote && quote.length > postLimit("quote"))
-    return { error: `Keep your quote under ${postLimit("quote")} characters.` };
-  if (review && review.length > postLimit("review"))
-    return { error: `Keep your review under ${postLimit("review")} characters.` };
+  if (!text) return { error: "Write something first." };
+  if (text.length > postLimit(kind))
+    return { error: `Keep your ${kind} under ${postLimit(kind)} characters.` };
 
-  const primaryKind = note ? "note" : quote ? "quote" : "review";
   const { error } = await supabase
     .from("posts")
     .update({
-      text_note: note,
-      text_quote: quote,
-      text_review: review,
+      text_note: kind === "note" ? text : null,
+      text_quote: kind === "quote" ? text : null,
+      text_review: kind === "review" ? text : null,
       genre,
-      kind: primaryKind,
-      body: note ?? quote ?? review,
+      kind,
+      rating,
+      body: text,
     })
     .eq("id", postId)
     .eq("author_id", user.id);

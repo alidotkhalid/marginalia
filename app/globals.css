@@ -68,6 +68,33 @@
     @apply block shrink-0 select-none overflow-hidden rounded-[15%] bg-transparent;
   }
 
+  /* ------------------------------------------------------------------------
+     Profile theme. Scoped to the profile page only: a near-black canvas with
+     flatter, cooler cards so the shelf and avatars carry the colour. The site
+     nav and every other page keep the warmer walnut palette.
+     ------------------------------------------------------------------------ */
+  .profile-theme {
+    background-color: #0c0c0a;
+    background-image: none;
+    @apply rounded-card p-4 sm:p-6;
+  }
+  .profile-theme .card {
+    @apply border-white/[0.07] shadow-none;
+    background-color: #141412;
+  }
+  .profile-theme .input,
+  .profile-theme select {
+    @apply border-white/10;
+    background-color: #1b1b18;
+  }
+  .profile-theme .btn-ghost {
+    @apply border-white/10;
+  }
+  /* Cards nested inside a card (composer chips, book rows) sit one step up. */
+  .profile-theme .card .card {
+    background-color: #1b1b18;
+  }
+
   .stat-num {
     @apply font-display text-xl font-semibold leading-none;
   }
