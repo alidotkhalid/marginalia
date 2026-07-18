@@ -11,6 +11,7 @@ import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
 import { EditableName } from "@/components/EditableName";
 import { EditableBio } from "@/components/EditableBio";
 import { EditableAvatar } from "@/components/EditableAvatar";
+import { PeopleStat, type Person } from "@/components/PeopleStat";
 import { Shelf } from "@/components/Shelf";
 import { StreakCard } from "@/components/StreakCard";
 import { ProfileTabs } from "@/components/ProfileTabs";
@@ -90,19 +91,38 @@ export default async function ProfilePage({
     );
   }
 
-  // Follower / following counts (accepted relationships only).
-  const [{ count: followers }, { count: following }] = await Promise.all([
+  // Follower / following lists (accepted relationships only). The counts come
+  // from the same rows, so the stat and the panel behind it always agree.
+  const [{ data: followerRows }, { data: followingRows }] = await Promise.all([
     supabase
       .from("follows")
-      .select("*", { count: "exact", head: true })
+      .select(
+        "follower_id, profiles!follower_id (id, username, display_name, avatar_icon)"
+      )
       .eq("following_id", profile.id)
-      .eq("status", "accepted"),
+      .eq("status", "accepted")
+      .order("created_at", { ascending: false })
+      .limit(200),
     supabase
       .from("follows")
-      .select("*", { count: "exact", head: true })
+      .select(
+        "following_id, profiles!following_id (id, username, display_name, avatar_icon)"
+      )
       .eq("follower_id", profile.id)
-      .eq("status", "accepted"),
+      .eq("status", "accepted")
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
+
+  const toPeople = (rows: unknown): Person[] =>
+    ((rows ?? []) as { profiles: Person | null }[])
+      .map((r) => r.profiles)
+      .filter((p): p is Person => !!p);
+
+  const followerList = toPeople(followerRows);
+  const followingList = toPeople(followingRows);
+  const followers = followerList.length;
+  const following = followingList.length;
 
   // Content is only fetched/shown when the viewer is allowed to see it.
   let feed: FeedPost[] = [];
@@ -192,8 +212,10 @@ export default async function ProfilePage({
             displayName={displayName}
             isSelf={isSelf}
             isPrivate={isPrivate}
-            followers={followers ?? 0}
-            following={following ?? 0}
+            followers={followers}
+            following={following}
+            followerList={followerList}
+            followingList={followingList}
             booksRead={0}
           />
           <div className="card p-8 text-center">
@@ -221,8 +243,10 @@ export default async function ProfilePage({
               displayName={displayName}
               isSelf={isSelf}
               isPrivate={isPrivate}
-              followers={followers ?? 0}
-              following={following ?? 0}
+              followers={followers}
+              following={following}
+              followerList={followerList}
+              followingList={followingList}
               booksRead={shelf.length}
             />
 
@@ -332,6 +356,8 @@ function ProfileCard({
   isPrivate,
   followers,
   following,
+  followerList,
+  followingList,
   booksRead,
 }: {
   profile: Record<string, unknown>;
@@ -340,6 +366,8 @@ function ProfileCard({
   isPrivate: boolean;
   followers: number;
   following: number;
+  followerList: Person[];
+  followingList: Person[];
   booksRead: number;
 }) {
   return (
@@ -387,16 +415,20 @@ function ProfileCard({
 
       <hr className="my-5 border-0 border-t border-white/10" />
 
-      <div className="flex items-start justify-center gap-7">
-        <div>
-          <span className="stat-num text-ink">{followers}</span>
-          <span className="stat-label">Followers</span>
-        </div>
-        <div>
-          <span className="stat-num text-ink">{following}</span>
-          <span className="stat-label">Following</span>
-        </div>
-        <div>
+      <div className="flex items-start justify-center gap-5">
+        <PeopleStat
+          label="Followers"
+          count={followers}
+          people={followerList}
+          emptyLine="No followers yet."
+        />
+        <PeopleStat
+          label="Following"
+          count={following}
+          people={followingList}
+          emptyLine="Not following anyone yet."
+        />
+        <div className="px-2 py-1">
           <span className="stat-num text-ink">{booksRead}</span>
           <span className="stat-label">Books</span>
         </div>
