@@ -6,7 +6,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { PostCard, type FeedPost } from "@/components/PostCard";
 import { TagFollowButton } from "@/components/TagFollowButton";
 import type { FollowStatus } from "@/app/actions";
-import { GENRES, isGenre, genreLabel } from "@/lib/genres";
+import { isGenre, genreLabel } from "@/lib/genres";
 
 type ReaderRow = {
   id: string;
@@ -17,110 +17,12 @@ type ReaderRow = {
   books: { title: string; author: string | null; cover_id: number | null } | null;
 };
 
-// Plain GET form. Navigating to /discover?q=… triggers the loading spinner and
-// re-renders server-side. No client JS needed.
-function SearchForm({ defaultValue }: { defaultValue: string }) {
-  return (
-    <form action="/discover" method="get">
-      <input
-        type="search"
-        name="q"
-        defaultValue={defaultValue}
-        placeholder="Search reads, readers, keywords…"
-        className="input"
-        aria-label="Search"
-      />
-    </form>
-  );
-}
-
-function GenreChips({
-  active,
-  followed,
-}: {
-  active: string | null;
-  followed?: Set<string>;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {active && (
-        <Link
-          href="/discover"
-          className="rounded-pill border border-parchment-dark px-3 py-1 font-mono text-xs text-cream-soft hover:border-brass"
-        >
-          ✕ clear
-        </Link>
-      )}
-      {GENRES.map((g) => (
-        <Link
-          key={g.slug}
-          href={`/discover?genre=${g.slug}`}
-          className={`rounded-pill border px-3 py-1 font-mono text-xs transition-colors ${
-            active === g.slug
-              ? "border-brass bg-brass/15 text-brass"
-              : "border-parchment-dark text-cream-soft hover:border-brass hover:text-brass"
-          }`}
-        >
-          {followed?.has(g.slug) ? "★ " : ""}#{g.slug}
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-// A single reader row with follow button.
-function ReaderCard({
-  r,
-  showFollow,
-  status,
-}: {
-  r: ReaderRow;
-  showFollow: boolean;
-  status: FollowStatus;
-}) {
-  return (
-    <li className="card p-5">
-      <div className="flex items-start gap-4">
-        <Link href={`/profile/${r.username}`}>
-          <Avatar name={r.display_name ?? r.username} icon={r.avatar_icon} size={52} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <Link
-            href={`/profile/${r.username}`}
-            className="font-display text-lg font-semibold text-ink no-underline hover:text-brass"
-          >
-            {r.display_name ?? `@${r.username}`}
-          </Link>
-          <p className="font-mono text-xs text-ink-faint">@{r.username}</p>
-          {r.bio && (
-            <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{r.bio}</p>
-          )}
-        </div>
-        {showFollow && <FollowButton targetId={r.id} initialStatus={status} />}
-      </div>
-
-      {r.books && (
-        <div className="mt-4 flex items-center gap-3 border-t border-parchment-dark pt-3">
-          <BookCover coverId={r.books.cover_id} title={r.books.title} size="S" />
-          <div className="min-w-0 text-sm">
-            <span className="tag-reading">Reading</span>
-            <p className="mt-1 truncate font-display font-semibold text-ink-soft">
-              {r.books.title}
-            </p>
-            <p className="truncate text-ink-faint">
-              {r.books.author ?? "Unknown author"}
-            </p>
-          </div>
-        </div>
-      )}
-    </li>
-  );
-}
+const SIDEBAR_LIMIT = 8;
 
 export default async function DiscoverPage({
   searchParams,
 }: {
-  searchParams: { genre?: string; q?: string };
+  searchParams: { tag?: string; q?: string; tab?: string; all?: string };
 }) {
   const supabase = createClient();
   const {
@@ -129,19 +31,26 @@ export default async function DiscoverPage({
 
   // Sanitize the query so it can't break the PostgREST filter string.
   const rawQ = (searchParams.q ?? "").trim();
-  const q = rawQ.replace(/[,()%*\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+  const q = rawQ
+    .replace(/[,()%*\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
 
-  const activeGenre =
-    searchParams.genre && isGenre(searchParams.genre) ? searchParams.genre : null;
+  const tab = searchParams.tab === "reads" ? "reads" : "readers";
+  const showAllTags = searchParams.all === "1";
 
-  // Follow status + blocks + followed tags (used across the views), fetched once.
+  // Follow status + blocks + followed tags, fetched once.
   const statusByUser = new Map<string, FollowStatus>();
   let blockedIds = new Set<string>();
   let followedTags = new Set<string>();
   if (user) {
     const [{ data: follows }, { data: myBlocks }, { data: tags }] =
       await Promise.all([
-        supabase.from("follows").select("following_id, status").eq("follower_id", user.id),
+        supabase
+          .from("follows")
+          .select("following_id, status")
+          .eq("follower_id", user.id),
         supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id),
         supabase.from("tag_follows").select("tag").eq("user_id", user.id),
       ]);
@@ -152,7 +61,47 @@ export default async function DiscoverPage({
     followedTags = new Set((tags ?? []).map((t) => t.tag));
   }
 
-  // ---- Search view ----
+  // ---- The shelves: every tagged read, reduced to counts and who writes them ----
+  const { data: tagRows } = await supabase
+    .from("feed_posts")
+    .select("author_id, genre")
+    .not("genre", "is", null)
+    .limit(4000);
+
+  const counts = new Map<string, number>();
+  const authorsByTag = new Map<string, Set<string>>();
+  const tagsByAuthor = new Map<string, Set<string>>();
+
+  for (const row of (tagRows ?? []) as { author_id: string; genre: string }[]) {
+    const g = row.genre;
+    if (!g) continue;
+    counts.set(g, (counts.get(g) ?? 0) + 1);
+
+    let authors = authorsByTag.get(g);
+    if (!authors) authorsByTag.set(g, (authors = new Set()));
+    authors.add(row.author_id);
+
+    let mine = tagsByAuthor.get(row.author_id);
+    if (!mine) tagsByAuthor.set(row.author_id, (mine = new Set()));
+    mine.add(g);
+  }
+
+  const shelves = [...counts.entries()]
+    .map(([slug, count]) => ({ slug, count }))
+    .sort((a, b) => b.count - a.count || a.slug.localeCompare(b.slug));
+
+  // The selected shelf: the one asked for, else the busiest.
+  const activeTag =
+    searchParams.tag && isGenre(searchParams.tag)
+      ? searchParams.tag
+      : shelves[0]?.slug ?? null;
+
+  const myTags = user ? tagsByAuthor.get(user.id) ?? new Set<string>() : new Set<string>();
+
+  // ---- Readers and reads for this shelf (or for the search) ----
+  let readers: ReaderRow[] = [];
+  let reads: FeedPost[] = [];
+
   if (q) {
     const [{ data: profs }, { data: postRows }] = await Promise.all([
       supabase
@@ -160,8 +109,8 @@ export default async function DiscoverPage({
         .select(
           "id, username, display_name, bio, avatar_icon, books!currently_reading (title, author, cover_id)"
         )
-        .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-        .limit(20),
+        .or(`username.ilike.%${q}%,display_name.ilike.%${q}%,bio.ilike.%${q}%`)
+        .limit(30),
       supabase
         .from("feed_posts")
         .select("*")
@@ -171,154 +120,255 @@ export default async function DiscoverPage({
         .order("created_at", { ascending: false })
         .limit(30),
     ]);
+    readers = (profs ?? []) as unknown as ReaderRow[];
+    reads = (postRows ?? []) as FeedPost[];
+  } else if (activeTag) {
+    const ids = [...(authorsByTag.get(activeTag) ?? new Set<string>())]
+      .filter((id) => id !== user?.id && !blockedIds.has(id))
+      .slice(0, 40);
 
-    const readers = ((profs ?? []) as unknown as ReaderRow[]).filter(
-      (r) => r.id !== user?.id && !blockedIds.has(r.id)
-    );
-    const posts = (postRows ?? []) as FeedPost[];
+    const [{ data: profs }, { data: postRows }] = await Promise.all([
+      ids.length
+        ? supabase
+            .from("profiles")
+            .select(
+              "id, username, display_name, bio, avatar_icon, books!currently_reading (title, author, cover_id)"
+            )
+            .in("id", ids)
+        : Promise.resolve({ data: [] }),
+      supabase
+        .from("feed_posts")
+        .select("*")
+        .eq("genre", activeTag)
+        .order("created_at", { ascending: false })
+        .limit(40),
+    ]);
+    readers = (profs ?? []) as unknown as ReaderRow[];
+    reads = (postRows ?? []) as FeedPost[];
+  }
 
-    return (
-      <div className="mx-auto max-w-prose space-y-6">
-        <section>
-          <h1 className="mb-3 font-display text-3xl font-bold text-cream">Search</h1>
-          <SearchForm defaultValue={rawQ} />
-        </section>
+  readers = readers.filter((r) => r.id !== user?.id && !blockedIds.has(r.id));
 
-        <section className="space-y-3">
-          <h2 className="section-title text-lg">Readers</h2>
-          {readers.length === 0 ? (
-            <p className="text-sm text-cream-soft">No readers match &ldquo;{q}&rdquo;.</p>
-          ) : (
-            <ul className="space-y-4">
-              {readers.map((r) => (
-                <ReaderCard
-                  key={r.id}
-                  r={r}
-                  showFollow={!!user}
-                  status={statusByUser.get(r.id) ?? "none"}
-                />
-              ))}
-            </ul>
+  // Shelves in common with the viewer, most overlap first.
+  const mutualOf = (id: string) => {
+    const theirs = tagsByAuthor.get(id);
+    if (!theirs) return 0;
+    let n = 0;
+    for (const t of myTags) if (theirs.has(t)) n++;
+    return n;
+  };
+  readers.sort((a, b) => mutualOf(b.id) - mutualOf(a.id));
+
+  const visibleShelves = showAllTags ? shelves : shelves.slice(0, SIDEBAR_LIMIT);
+  const tabHref = (t: string) =>
+    `/discover?${new URLSearchParams({
+      ...(activeTag ? { tag: activeTag } : {}),
+      ...(rawQ ? { q: rawQ } : {}),
+      ...(showAllTags ? { all: "1" } : {}),
+      tab: t,
+    }).toString()}`;
+
+  return (
+    <div className="grid gap-10 lg:grid-cols-[16rem_1fr]">
+      {/* ---- Shelves ---- */}
+      <aside className="lg:border-r lg:border-white/[0.06] lg:pr-6">
+        <h2 className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-faint">
+          Shelves
+        </h2>
+
+        {shelves.length === 0 ? (
+          <p className="text-sm text-ink-faint">
+            No tagged reads yet. Tag a read with a genre and it will shelve here.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {visibleShelves.map((s) => {
+              const on = s.slug === activeTag;
+              return (
+                <li key={s.slug}>
+                  <Link
+                    href={`/discover?tag=${s.slug}&tab=${tab}${
+                      showAllTags ? "&all=1" : ""
+                    }`}
+                    className={`flex items-center justify-between gap-2 rounded-card px-4 py-2.5 no-underline transition-colors ${
+                      on
+                        ? "bg-brass/[0.12] text-brass"
+                        : "text-ink-soft hover:bg-white/[0.04] hover:text-ink"
+                    }`}
+                  >
+                    <span className="truncate">#{s.slug}</span>
+                    <span className="shrink-0 font-mono text-xs text-ink-faint">
+                      {s.count}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {shelves.length > SIDEBAR_LIMIT && (
+          <Link
+            href={`/discover?${new URLSearchParams({
+              ...(activeTag ? { tag: activeTag } : {}),
+              tab,
+              ...(showAllTags ? {} : { all: "1" }),
+            }).toString()}`}
+            className="mt-4 inline-block font-mono text-xs text-brass no-underline hover:text-brass-light"
+          >
+            {showAllTags ? "← fewer tags" : `all ${shelves.length} tags →`}
+          </Link>
+        )}
+      </aside>
+
+      {/* ---- Discover ---- */}
+      <div>
+        <h1 className="font-display text-5xl font-bold text-cream">Discover</h1>
+
+        <form action="/discover" method="get" className="mt-6">
+          {activeTag && <input type="hidden" name="tag" value={activeTag} />}
+          <input type="hidden" name="tab" value={tab} />
+          <input
+            type="search"
+            name="q"
+            defaultValue={rawQ}
+            placeholder="Search reads, readers, keywords…"
+            className="input py-4 text-base"
+            aria-label="Search"
+          />
+        </form>
+
+        {/* Tabs */}
+        <div className="mt-6 flex items-center gap-7 border-b border-white/[0.06]">
+          {(["readers", "reads"] as const).map((t) => (
+            <Link
+              key={t}
+              href={tabHref(t)}
+              className={`-mb-px border-b-2 px-1 pb-3 text-sm capitalize no-underline transition-colors ${
+                tab === t
+                  ? "border-brass text-brass"
+                  : "border-transparent text-ink-soft hover:text-ink"
+              }`}
+            >
+              {t}
+            </Link>
+          ))}
+
+          {activeTag && user && !q && (
+            <span className="ml-auto pb-2">
+              <TagFollowButton
+                key={activeTag}
+                tag={activeTag}
+                initialFollowing={followedTags.has(activeTag)}
+              />
+            </span>
           )}
-        </section>
+        </div>
 
-        <section className="space-y-3">
-          <h2 className="section-title text-lg">Reads</h2>
-          {posts.length === 0 ? (
-            <p className="text-sm text-cream-soft">No reads match &ldquo;{q}&rdquo;.</p>
+        {/* Context line */}
+        <p className="mt-4 text-sm text-ink-faint">
+          {q ? (
+            <>
+              Results for &ldquo;{rawQ}&rdquo;.{" "}
+              <Link href={`/discover?tag=${activeTag ?? ""}`} className="link">
+                clear search
+              </Link>
+            </>
+          ) : activeTag ? (
+            tab === "readers" ? (
+              <>Readers who write about {genreLabel(activeTag)}.</>
+            ) : (
+              <>Reads shelved under {genreLabel(activeTag)}.</>
+            )
+          ) : null}
+        </p>
+
+        {/* ---- Panel ---- */}
+        <div className="mt-2">
+          {tab === "readers" ? (
+            readers.length === 0 ? (
+              <div className="card mt-4 p-8 text-center text-ink-faint">
+                No readers on this shelf yet.
+              </div>
+            ) : (
+              <ul className="divide-y divide-white/[0.06]">
+                {readers.map((r) => {
+                  const mutual = mutualOf(r.id);
+                  return (
+                    <li
+                      key={r.id}
+                      className="flex flex-wrap items-center gap-4 py-5"
+                    >
+                      <Link href={`/profile/${r.username}`}>
+                        <Avatar
+                          name={r.display_name ?? r.username}
+                          icon={r.avatar_icon}
+                          size={44}
+                        />
+                      </Link>
+
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/profile/${r.username}`}
+                          className="font-semibold text-ink no-underline hover:text-brass"
+                        >
+                          {r.display_name ?? `@${r.username}`}
+                        </Link>
+                        <p className="truncate text-sm text-ink-soft">
+                          {r.bio ?? `@${r.username}`}
+                        </p>
+                      </div>
+
+                      {r.books && (
+                        <span className="flex items-center gap-3">
+                          <BookCover
+                            coverId={r.books.cover_id}
+                            title={r.books.title}
+                            size="S"
+                          />
+                          <span className="font-mono text-sm text-ink-soft">
+                            reading {r.books.title}
+                          </span>
+                        </span>
+                      )}
+
+                      {mutual > 0 && (
+                        <span className="font-mono text-xs text-ink-faint">
+                          {mutual} mutual {mutual === 1 ? "shelf" : "shelves"}
+                        </span>
+                      )}
+
+                      {user && (
+                        <FollowButton
+                          targetId={r.id}
+                          initialStatus={statusByUser.get(r.id) ?? "none"}
+                        />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )
+          ) : reads.length === 0 ? (
+            <div className="card mt-4 p-8 text-center text-ink-faint">
+              No reads on this shelf yet.
+            </div>
           ) : (
-            <div className="space-y-4">
-              {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  currentUserId={user?.id}
-                  followStatus={statusByUser.get(post.author_id) ?? "none"}
-                />
+            <div className="mt-4 gap-5 space-y-5 xl:columns-2">
+              {reads.map((post) => (
+                <div key={post.id} className="break-inside-avoid">
+                  <PostCard
+                    post={post}
+                    currentUserId={user?.id}
+                    followStatus={statusByUser.get(post.author_id) ?? "none"}
+                    variant="feed"
+                  />
+                </div>
               ))}
             </div>
           )}
-        </section>
-      </div>
-    );
-  }
-
-  // ---- Genre view ----
-  if (activeGenre) {
-    const { data: posts } = await supabase
-      .from("feed_posts")
-      .select("*")
-      .eq("genre", activeGenre)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    const feed = (posts ?? []) as FeedPost[];
-
-    return (
-      <div className="mx-auto max-w-prose space-y-6">
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="font-display text-3xl font-bold text-brass">
-              #{activeGenre}
-            </h1>
-            {user && (
-              <TagFollowButton
-                key={activeGenre}
-                tag={activeGenre}
-                initialFollowing={followedTags.has(activeGenre)}
-              />
-            )}
-          </div>
-          <SearchForm defaultValue="" />
-        </section>
-
-        <p className="text-sm text-cream-soft">Reads about {genreLabel(activeGenre)}.</p>
-        <GenreChips active={activeGenre} followed={followedTags} />
-
-        {feed.length === 0 ? (
-          <div className="card p-6 text-center text-ink-faint">
-            No reads in this genre yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {feed.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUserId={user?.id}
-                followStatus={statusByUser.get(post.author_id) ?? "none"}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ---- Default: readers directory ----
-  let query = supabase
-    .from("profiles")
-    .select(
-      "id, username, display_name, bio, avatar_icon, books!currently_reading (title, author, cover_id)"
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
-  if (user) query = query.neq("id", user.id);
-
-  const { data: readers } = await query;
-  const list = ((readers ?? []) as unknown as ReaderRow[]).filter(
-    (r) => !blockedIds.has(r.id)
-  );
-
-  return (
-    <div className="mx-auto max-w-prose space-y-6">
-      <section>
-        <h1 className="mb-1 font-display text-3xl font-bold text-cream">Discover</h1>
-        <p className="mb-3 text-sm text-cream-soft">
-          Search reads and readers, browse by genre, or find people to follow.
-        </p>
-        <SearchForm defaultValue="" />
-      </section>
-
-      <GenreChips active={null} followed={followedTags} />
-
-      <hr className="rule" />
-
-      {list.length === 0 ? (
-        <div className="card p-6 text-center text-ink-faint">
-          No other readers yet. Invite a friend.
         </div>
-      ) : (
-        <ul className="space-y-4">
-          {list.map((r) => (
-            <ReaderCard
-              key={r.id}
-              r={r}
-              showFollow={!!user}
-              status={statusByUser.get(r.id) ?? "none"}
-            />
-          ))}
-        </ul>
-      )}
+      </div>
     </div>
   );
 }
