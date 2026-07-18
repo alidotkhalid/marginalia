@@ -440,26 +440,6 @@ export async function updateAvatarIcon(icon: string) {
   revalidatePath("/", "layout");
 }
 
-/** Save the reader's profile accent color (#rrggbb) and banner style. */
-export async function updateProfileTheme(accentColor: string, bannerStyle: string) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const color = /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#b1934f";
-  const banner = ["gradient", "shelf", "marble", "plain"].includes(bannerStyle)
-    ? bannerStyle
-    : "gradient";
-
-  await supabase
-    .from("profiles")
-    .update({ accent_color: color, banner_style: banner })
-    .eq("id", user.id);
-  revalidatePath("/", "layout");
-}
-
 /** Add a book to the current user's "Books Read" shelf. */
 export async function addReadBook(book: BookResult) {
   const supabase = createClient();

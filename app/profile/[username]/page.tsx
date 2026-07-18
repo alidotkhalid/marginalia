@@ -33,7 +33,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, username, display_name, bio, reading_progress, accent_color, is_private, avatar_icon, books!currently_reading (title, author, cover_id)"
+      "id, username, display_name, bio, reading_progress, is_private, avatar_icon, books!currently_reading (title, author, cover_id)"
     )
     .eq("username", params.username)
     .maybeSingle();
@@ -71,7 +71,6 @@ export default async function ProfilePage({
     myStatus = (myFollow?.status as FollowStatus) ?? "none";
   }
 
-  const accent = (profile.accent_color as string) ?? "#b1934f";
   const displayName = profile.display_name ?? profile.username;
   const isPrivate = (profile.is_private as boolean) ?? false;
   const canView = isSelf || !isPrivate || myStatus === "accepted";
@@ -259,7 +258,7 @@ export default async function ProfilePage({
                           {currentBook.author ?? "Unknown author"}
                         </p>
                         <div className="progress mt-3">
-                          <span style={{ width: `${progress}%`, background: accent }} />
+                          <span style={{ width: `${progress}%` }} />
                         </div>
                         <span className="mt-1 block font-mono text-xs text-ink-faint">
                           {progress}% read
