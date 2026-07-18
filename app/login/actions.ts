@@ -37,13 +37,14 @@ export async function signup(formData: FormData) {
     );
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       // The DB trigger reads username from this metadata to create the profile.
       data: { username },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/`,
+      // After clicking the link in the email, land on the welcome flow.
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/welcome`,
     },
   });
 
@@ -52,5 +53,13 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+
+  // With email confirmation on, Supabase returns a user but no session: the
+  // account is not usable until the link is clicked. Tell them to go look.
+  if (!data.session) {
+    redirect(`/signup?sent=${encodeURIComponent(email)}`);
+  }
+
+  // Confirmation is off, so they are already signed in. Straight to setup.
+  redirect("/welcome");
 }

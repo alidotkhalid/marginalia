@@ -440,6 +440,53 @@ export async function updateAvatarIcon(icon: string) {
   revalidatePath("/", "layout");
 }
 
+/**
+ * Finish the welcome flow: name, avatar, bio, and what they are reading now.
+ * Everything is optional except that we mark the reader as onboarded, so they
+ * are not sent back here on the next visit.
+ */
+export async function completeOnboarding(input: {
+  displayName: string;
+  bio: string;
+  avatarIcon: string;
+  book: BookResult | null;
+  progress: number;
+}) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const displayName = input.displayName.trim().slice(0, 60);
+  const bio = input.bio.trim().slice(0, 280);
+  const progress = Math.min(100, Math.max(0, Math.round(input.progress)));
+
+  const patch: Record<string, unknown> = {
+    onboarded_at: new Date().toISOString(),
+    reading_progress: input.book ? progress : 0,
+  };
+  if (displayName) patch.display_name = displayName;
+  if (bio) patch.bio = bio;
+  if (input.avatarIcon && isAvatarIcon(input.avatarIcon)) {
+    patch.avatar_icon = input.avatarIcon;
+  }
+
+  if (input.book) {
+    try {
+      patch.currently_reading = await upsertBook(supabase, input.book);
+    } catch {
+      return { error: "That book could not be saved. Try another." };
+    }
+  }
+
+  const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 /** Add a book to the current user's "Books Read" shelf. */
 export async function addReadBook(book: BookResult) {
   const supabase = createClient();

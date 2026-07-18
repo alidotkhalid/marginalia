@@ -30,6 +30,8 @@ create table if not exists public.profiles (
                         check (banner_style in ('gradient', 'shelf', 'marble', 'plain')),
   -- Chosen preset pixel-art avatar icon id (null = auto identicon).
   avatar_icon         text,
+  -- When the reader finished the welcome flow. Null means they still owe it.
+  onboarded_at        timestamptz,
   created_at          timestamptz not null default now()
 );
 

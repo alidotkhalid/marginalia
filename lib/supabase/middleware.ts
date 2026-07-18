@@ -34,16 +34,42 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const path = request.nextUrl.pathname;
+
   // Gate the home feed and profile editing behind auth.
   const protectedPaths = ["/", "/settings"];
   const isProtected = protectedPaths.some(
-    (p) => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith("/settings")
+    (p) => path === p || path.startsWith("/settings")
   );
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  // A verified but unfinished account is sent to the welcome flow. Auth routes
+  // and the flow itself are exempt, otherwise the redirect would loop.
+  const exempt =
+    path === "/welcome" ||
+    path.startsWith("/login") ||
+    path.startsWith("/signup") ||
+    path.startsWith("/auth") ||
+    path.startsWith("/api");
+
+  if (user && !exempt) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarded_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile && !profile.onboarded_at) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/welcome";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;
