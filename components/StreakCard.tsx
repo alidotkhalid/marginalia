@@ -28,7 +28,7 @@ export function StreakCard({
   best: number;
 }) {
   return (
-    <section className="card flex items-center gap-4 p-5">
+    <section className="card streak-card flex items-center gap-4 p-5">
       <span
         className="font-display text-3xl font-semibold leading-none text-brass"
         title={`${current} day${current === 1 ? "" : "s"}`}

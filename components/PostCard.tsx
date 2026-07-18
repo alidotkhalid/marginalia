@@ -134,7 +134,7 @@ export function PostCard({
         <div className="min-w-0 flex-1">
           {/* Type badge · book · time · stars */}
           <div className="mb-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <span className="rounded-pill border border-brass/30 bg-brass/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-brass">
+            <span className="kind-badge rounded-pill border border-brass/30 bg-brass/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-brass">
               {kind}
             </span>
             {post.book_title && (

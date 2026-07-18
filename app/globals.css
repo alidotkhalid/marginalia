@@ -69,30 +69,120 @@
   }
 
   /* ------------------------------------------------------------------------
-     Profile theme. Scoped to the profile page only: a near-black canvas with
-     flatter, cooler cards so the shelf and avatars carry the colour. The site
-     nav and every other page keep the warmer walnut palette.
+     Site navigation. Near-black bar, wordmark left, pill tabs, avatar right.
+     The active pill gets a soft gold wash.
+     ------------------------------------------------------------------------ */
+  .site-nav {
+    background-color: rgba(10, 10, 9, 0.92);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+  }
+  .site-brand {
+    @apply flex items-center gap-2 font-display text-xl font-bold tracking-tight no-underline;
+    color: #ece7db;
+  }
+  .site-brand:hover {
+    color: theme("colors.brass.DEFAULT");
+  }
+  .nav-pill {
+    @apply inline-flex items-center rounded-pill px-3.5 py-1.5 text-sm font-medium
+           no-underline transition-colors;
+    color: #a8a294;
+  }
+  .nav-pill:hover {
+    color: #ece7db;
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  .nav-pill-active {
+    background-color: #2b2517;
+    color: #d9bd72;
+  }
+  .nav-pill-active:hover {
+    background-color: #332c1c;
+    color: #e6cd8a;
+  }
+
+  /* ------------------------------------------------------------------------
+     Profile theme. Scoped to the profile page for now: a near-black canvas,
+     flat cards with a hairline edge, warm-white text and aged gold. Other
+     pages keep the walnut palette until they are redesigned too.
      ------------------------------------------------------------------------ */
   .profile-theme {
-    background-color: #0c0c0a;
+    background-color: #0d0d0b;
     background-image: none;
     @apply rounded-card p-4 sm:p-6;
+    color: #ece7db;
   }
   .profile-theme .card {
-    @apply border-white/[0.07] shadow-none;
-    background-color: #141412;
-  }
-  .profile-theme .input,
-  .profile-theme select {
-    @apply border-white/10;
-    background-color: #1b1b18;
-  }
-  .profile-theme .btn-ghost {
-    @apply border-white/10;
+    background-color: #131311;
+    border-color: rgba(255, 255, 255, 0.06);
+    @apply shadow-none;
   }
   /* Cards nested inside a card (composer chips, book rows) sit one step up. */
   .profile-theme .card .card {
-    background-color: #1b1b18;
+    background-color: #1a1a17;
+  }
+  .profile-theme .input,
+  .profile-theme select,
+  .profile-theme textarea {
+    background-color: #1a1a17;
+    border-color: rgba(255, 255, 255, 0.09);
+    color: #ece7db;
+  }
+  .profile-theme .btn-ghost {
+    border-color: rgba(255, 255, 255, 0.09);
+  }
+  .profile-theme .btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Text tones, remapped onto the new palette */
+  .profile-theme .text-ink { color: #ece7db; }
+  .profile-theme .text-ink-soft { color: #a8a294; }
+  .profile-theme .text-ink-faint { color: #7d7768; }
+  .profile-theme .text-cream { color: #ece7db; }
+  .profile-theme .text-brass { color: #c9a961; }
+  .profile-theme .text-brass-light { color: #dcc078; }
+
+  /* The streak card carries a faint green cast, as in the reference */
+  .profile-theme .streak-card {
+    background-color: #10160f;
+    border-color: rgba(201, 169, 97, 0.14);
+  }
+
+  /* Type badge on a read: NOTE / QUOTE / REVIEW */
+  .profile-theme .kind-badge {
+    background-color: #2b2517;
+    border-color: rgba(201, 169, 97, 0.28);
+    color: #c9a961;
+  }
+
+  /* Profile tab bar: same pill language as the site nav */
+  .profile-tab {
+    @apply inline-flex items-center rounded-pill px-5 py-2 text-sm transition-colors;
+    background-color: #171714;
+    color: #a8a294;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .profile-tab:hover {
+    color: #ece7db;
+    background-color: #1f1f1a;
+  }
+  .profile-tab-active {
+    background-color: #2b2517;
+    border-color: rgba(201, 169, 97, 0.28);
+    color: #d9bd72;
+    font-weight: 600;
+  }
+
+  /* Stat figures read as clean sans numerals in the reference, not serif */
+  .profile-theme .stat-num {
+    @apply font-sans text-2xl font-bold;
+    color: #ece7db;
+  }
+  .profile-theme .stat-label {
+    color: #a8a294;
+    @apply font-sans text-xs normal-case tracking-normal;
   }
 
   .stat-num {

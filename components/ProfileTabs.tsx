@@ -38,11 +38,7 @@ export function ProfileTabs({
             type="button"
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-pill px-4 py-2 text-sm transition-colors ${
-              tab === t.key
-                ? "bg-brass/15 font-semibold text-brass ring-1 ring-brass/40"
-                : "text-ink-soft ring-1 ring-parchment-dark hover:text-ink"
-            }`}
+            className={`profile-tab ${tab === t.key ? "profile-tab-active" : ""}`}
           >
             {t.label}
             <span className="ml-1.5 font-mono text-[11px] text-ink-faint">

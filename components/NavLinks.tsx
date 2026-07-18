@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The signed-in nav links. The tab matching the current route gets a soft glow.
-export function NavLinks({ pendingRequests }: { pendingRequests: number }) {
+// The signed-in nav. Every tab is a pill; the one matching the current route is
+// filled with a soft gold wash. No links are removed, they just wrap on narrow
+// screens.
+export function NavLinks({
+  pendingRequests,
+  username,
+}: {
+  pendingRequests: number;
+  username?: string | null;
+}) {
   const pathname = usePathname();
 
   const items: { href: string; label: string; badge?: number }[] = [
@@ -13,13 +21,16 @@ export function NavLinks({ pendingRequests }: { pendingRequests: number }) {
     { href: "/tags", label: "Tags" },
     { href: "/rooms", label: "Rooms" },
     { href: "/books", label: "Books" },
+    ...(username ? [{ href: `/profile/${username}`, label: "Profile" }] : []),
     { href: "/requests", label: "Requests", badge: pendingRequests },
     { href: "/customize", label: "Customize" },
     { href: "/settings", label: "Settings" },
   ];
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(href + "/");
 
   return (
     <>
@@ -27,13 +38,11 @@ export function NavLinks({ pendingRequests }: { pendingRequests: number }) {
         <Link
           key={it.href}
           href={it.href}
-          className={`relative font-medium transition-colors ${
-            isActive(it.href) ? "nav-glow" : "text-ink-soft hover:text-brass"
-          }`}
+          className={`nav-pill ${isActive(it.href) ? "nav-pill-active" : ""}`}
         >
           {it.label}
           {it.badge && it.badge > 0 ? (
-            <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-pill bg-oxblood px-1 text-[10px] font-bold text-cream">
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-oxblood px-1 text-[10px] font-bold text-cream">
               {it.badge}
             </span>
           ) : null}

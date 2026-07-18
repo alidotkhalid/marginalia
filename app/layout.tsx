@@ -49,44 +49,45 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <header className="sticky top-0 z-20 border-b border-brass/20 bg-parchment/95 backdrop-blur">
-          <div className="mx-auto flex max-w-shell items-center justify-between px-4 py-3 sm:px-6">
-            <Link
-              href="/"
-              className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-ink no-underline hover:text-brass"
-            >
+        <header className="site-nav sticky top-0 z-20">
+          <div className="mx-auto flex max-w-shell flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
+            <Link href="/" className="site-brand">
               <Logo /> Marginaly
             </Link>
 
-            <nav className="flex items-center gap-5 text-sm">
-              {user ? (
-                <>
-                  <NavLinks pendingRequests={pendingRequests} />
+            {user ? (
+              <>
+                <nav className="order-3 flex flex-1 flex-wrap items-center justify-center gap-1.5 text-sm md:order-none">
+                  <NavLinks pendingRequests={pendingRequests} username={username} />
+                </nav>
+
+                <div className="ml-auto flex items-center gap-4 md:ml-0">
                   <form action={signOut}>
-                    <button
-                      className="font-medium text-ink-faint hover:text-oxblood"
-                      type="submit"
-                    >
+                    <button className="nav-pill" type="submit">
                       Sign out
                     </button>
                   </form>
                   {username && (
                     <Link href={`/profile/${username}`} title={`@${username}`}>
-                      <Avatar name={displayName ?? username} icon={avatarIcon} size={34} />
+                      <Avatar
+                        name={displayName ?? username}
+                        icon={avatarIcon}
+                        size={34}
+                      />
                     </Link>
                   )}
-                </>
-              ) : (
-                <>
-                  <Link href="/login" className="font-medium text-ink-soft hover:text-brass">
-                    Log in
-                  </Link>
-                  <Link href="/signup" className="btn-accent !py-1.5">
-                    Join
-                  </Link>
-                </>
-              )}
-            </nav>
+                </div>
+              </>
+            ) : (
+              <nav className="ml-auto flex items-center gap-3 text-sm">
+                <Link href="/login" className="nav-pill">
+                  Log in
+                </Link>
+                <Link href="/signup" className="btn-accent !py-1.5">
+                  Join
+                </Link>
+              </nav>
+            )}
           </div>
         </header>
 
