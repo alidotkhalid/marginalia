@@ -28,7 +28,8 @@ export default async function RootLayout({
   let avatarIcon: string | null = null;
   let pendingRequests = 0;
   if (user) {
-    const [{ data }, { count }] = await Promise.all([
+    // The nav badge counts everything waiting: follow requests + room invites.
+    const [{ data }, { count: requests }, { count: invites }] = await Promise.all([
       supabase
         .from("profiles")
         .select("username, display_name, avatar_icon")
@@ -39,11 +40,15 @@ export default async function RootLayout({
         .select("*", { count: "exact", head: true })
         .eq("following_id", user.id)
         .eq("status", "pending"),
+      supabase
+        .from("room_invites")
+        .select("*", { count: "exact", head: true })
+        .eq("invitee_id", user.id),
     ]);
     username = data?.username ?? null;
     displayName = data?.display_name ?? data?.username ?? null;
     avatarIcon = data?.avatar_icon ?? null;
-    pendingRequests = count ?? 0;
+    pendingRequests = (requests ?? 0) + (invites ?? 0);
   }
 
   return (

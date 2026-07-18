@@ -22,7 +22,7 @@ export function NavLinks({
     { href: "/rooms", label: "Rooms" },
     { href: "/books", label: "Books" },
     ...(username ? [{ href: `/profile/${username}`, label: "Profile" }] : []),
-    { href: "/requests", label: "Requests", badge: pendingRequests },
+    { href: "/notifications", label: "Notifications", badge: pendingRequests },
     { href: "/settings", label: "Settings" },
   ];
 

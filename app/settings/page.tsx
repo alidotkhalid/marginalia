@@ -54,7 +54,7 @@ export default async function SettingsPage() {
         <h2 className="mb-4 font-display text-xl text-ink">Privacy</h2>
         <PrivacyToggle initialPrivate={isPrivate} />
         <div className="mt-4 border-t border-parchment-dark pt-4">
-          <Link href="/requests" className="link text-sm">
+          <Link href="/notifications" className="link text-sm">
             Follow requests{pending ? ` (${pending})` : ""} →
           </Link>
         </div>
