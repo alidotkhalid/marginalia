@@ -12,6 +12,7 @@ import { postLimit, type PostKind } from "@/lib/constants";
 import { isGenre } from "@/lib/genres";
 import { subjectForGenre, subjectForMood } from "@/lib/books";
 import { isAvatarIcon } from "@/lib/avatarIcons";
+import { isRoomGenre, isRoomMode, MIXED } from "@/lib/rooms";
 import type { CommentRow } from "@/lib/comments";
 
 /**
@@ -675,7 +676,11 @@ export async function fetchMoreBooks(params: {
 // ---------------------------------------------------------------------------
 
 /** Create a reading room and return its id. */
-export async function createRoom(name: string) {
+export async function createRoom(
+  name: string,
+  genre: string = MIXED,
+  mode: string = "quiet"
+) {
   const supabase = createClient();
   const {
     data: { user },
@@ -687,12 +692,68 @@ export async function createRoom(name: string) {
 
   const { data, error } = await supabase
     .from("rooms")
-    .insert({ name: clean, created_by: user.id })
+    .insert({
+      name: clean,
+      created_by: user.id,
+      genre: isRoomGenre(genre) ? genre : MIXED,
+      mode: isRoomMode(mode) ? mode : "quiet",
+    })
     .select("id")
     .single();
   if (error) return { error: error.message, id: null };
   revalidatePath("/rooms");
   return { error: null, id: data.id as string };
+}
+
+/** Invite a reader, by username, into a room. */
+export async function inviteToRoom(roomId: string, username: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const handle = username.trim().replace(/^@/, "").toLowerCase();
+  if (!handle) return { error: "Who would you like to invite?" };
+
+  const { data: invitee } = await supabase
+    .from("profiles")
+    .select("id, display_name, username")
+    .eq("username", handle)
+    .maybeSingle();
+
+  if (!invitee) return { error: `No reader called @${handle}.` };
+  if (invitee.id === user.id) return { error: "You are already here." };
+
+  const { error } = await supabase.from("room_invites").upsert(
+    { room_id: roomId, inviter_id: user.id, invitee_id: invitee.id },
+    { onConflict: "room_id,invitee_id", ignoreDuplicates: true }
+  );
+
+  // A block on either side is what the RLS policy turns away.
+  if (error) return { error: "That reader cannot be invited." };
+
+  revalidatePath("/rooms", "layout");
+  return {
+    error: null,
+    invited: (invitee.display_name as string | null) ?? `@${handle}`,
+  };
+}
+
+/** Clear an invitation: the invitee dismisses it, or the inviter retracts it. */
+export async function dismissRoomInvite(roomId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("room_invites")
+    .delete()
+    .eq("room_id", roomId)
+    .eq("invitee_id", user.id);
+  revalidatePath("/rooms", "layout");
 }
 
 /** Join a room (or refresh presence). Prefills the book from Currently Reading. */

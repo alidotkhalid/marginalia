@@ -15,7 +15,7 @@ export default async function RoomPage({
 
   const { data: room } = await supabase
     .from("rooms")
-    .select("id, name, timer_ends_at, created_by")
+    .select("id, name, genre, mode, timer_ends_at, created_by")
     .eq("id", params.id)
     .maybeSingle();
   if (!room) notFound();
@@ -24,7 +24,7 @@ export default async function RoomPage({
   const { data: parts } = await supabase
     .from("room_participants")
     .select(
-      "user_id, book_title, book_cover_id, current_page, last_seen, profiles!user_id (username, display_name, avatar_icon)"
+      "user_id, book_title, book_cover_id, current_page, joined_at, last_seen, profiles!user_id (username, display_name, avatar_icon, reading_progress)"
     )
     .eq("room_id", params.id)
     .gt("last_seen", cutoff)
@@ -36,11 +36,13 @@ export default async function RoomPage({
       book_title: string | null;
       book_cover_id: number | null;
       current_page: number;
+      joined_at: string;
       last_seen: string;
       profiles: {
         username: string;
         display_name: string | null;
         avatar_icon: string | null;
+        reading_progress: number | null;
       } | null;
     }>
   ).map((p) => ({
@@ -51,21 +53,21 @@ export default async function RoomPage({
     book_title: p.book_title,
     book_cover_id: p.book_cover_id,
     current_page: p.current_page,
+    progress: p.profiles?.reading_progress ?? 0,
+    joined_at: p.joined_at,
     last_seen: p.last_seen,
   }));
 
   return (
-    <div className="mx-auto max-w-prose space-y-6">
-      <h1 className="font-display text-3xl font-bold text-cream">
-        {room.name as string}
-      </h1>
-      <RoomLive
-        roomId={room.id as string}
-        timerEndsAt={(room.timer_ends_at as string | null) ?? null}
-        participants={participants}
-        meId={user.id}
-        amCreator={room.created_by === user.id}
-      />
-    </div>
+    <RoomLive
+      roomId={room.id as string}
+      roomName={room.name as string}
+      genre={(room.genre as string) ?? "mixed"}
+      mode={(room.mode as string) ?? "quiet"}
+      timerEndsAt={(room.timer_ends_at as string | null) ?? null}
+      participants={participants}
+      meId={user.id}
+      amCreator={room.created_by === user.id}
+    />
   );
 }

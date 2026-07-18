@@ -12,8 +12,10 @@ import {
   stopTimer,
   deleteRoom,
 } from "@/app/actions";
+import { roomGenreLabel, roomModeLabel } from "@/lib/rooms";
 import { Avatar } from "./Avatar";
 import { BookCover } from "./BookCover";
+import { InviteReader } from "./InviteReader";
 
 export type RoomParticipant = {
   user_id: string;
@@ -23,10 +25,14 @@ export type RoomParticipant = {
   book_title: string | null;
   book_cover_id: number | null;
   current_page: number;
+  /** Percent through their current book, from their profile. */
+  progress: number;
+  joined_at: string;
   last_seen: string;
 };
 
 const PRESENCE_MS = 90_000;
+const PAUSED_MS = 2 * 60_000;
 
 function fmt(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -35,14 +41,38 @@ function fmt(ms: number) {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+const WORDS = [
+  "No",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+];
+
+function countWord(n: number): string {
+  return WORDS[n] ?? String(n);
+}
+
 export function RoomLive({
   roomId,
+  roomName,
+  genre,
+  mode,
   timerEndsAt,
   participants,
   meId,
   amCreator,
 }: {
   roomId: string;
+  roomName: string;
+  genre: string;
+  mode: string;
   timerEndsAt: string | null;
   participants: RoomParticipant[];
   meId: string;
@@ -52,6 +82,7 @@ export function RoomLive({
   const [now, setNow] = useState(() => Date.now());
   const me = participants.find((p) => p.user_id === meId);
   const [page, setPage] = useState(me?.current_page ?? 0);
+  const [preset, setPreset] = useState(45);
   const [, startAction] = useTransition();
 
   // Gentle chime, synthesized (no audio file). The AudioContext is created on a
@@ -143,17 +174,16 @@ export function RoomLive({
 
   const remaining = timerEndsAt ? new Date(timerEndsAt).getTime() - now : null;
   const timerActive = remaining !== null && remaining > 0;
-  const timerDone = remaining !== null && remaining <= 0;
 
   // Chime once when a timer we were watching reaches zero.
   useEffect(() => {
     if (timerActive) wasActiveRef.current = true;
-    else if (timerDone && wasActiveRef.current) {
+    else if (remaining !== null && remaining <= 0 && wasActiveRef.current) {
       wasActiveRef.current = false;
       playChime();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timerActive, timerDone]);
+  }, [timerActive, remaining]);
 
   function setMyPage(next: number) {
     const val = Math.max(0, next);
@@ -168,165 +198,222 @@ export function RoomLive({
     (p) => now - new Date(p.last_seen).getTime() < PRESENCE_MS
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Timer */}
-      <section className="relative card p-6 text-center">
-        <button
-          type="button"
-          onClick={toggleMute}
-          title={muted ? "Chime muted. Tap to unmute" : "Mute the chime"}
-          aria-label={muted ? "Unmute chime" : "Mute chime"}
-          className="absolute right-3 top-3 text-ink-faint hover:text-brass"
-        >
-          {muted ? "🔕" : "🔔"}
-        </button>
-        {timerActive ? (
-          <>
-            <p className="font-mono text-5xl font-semibold text-brass">
-              {fmt(remaining as number)}
-            </p>
-            <p className="mt-1 text-sm text-ink-faint">reading together</p>
-            <button
-              onClick={() => startAction(async () => { await stopTimer(roomId); router.refresh(); })}
-              className="btn-ghost mt-3 !py-1.5 text-sm"
-            >
-              End timer
-            </button>
-          </>
-        ) : timerDone ? (
-          <>
-            <p className="font-display text-2xl text-ink">Session complete 🕯️</p>
-            <p className="mt-1 text-sm text-ink-faint">Start another when you&rsquo;re ready.</p>
-            <div className="mt-3 flex justify-center gap-2">
-              {[25, 45, 60].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    ensureAudio();
-                    startAction(async () => {
-                      await startTimer(roomId, m);
-                      router.refresh();
-                    });
-                  }}
-                  className="btn-accent !py-1.5 text-sm"
-                >
-                  {m} min
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="font-display text-xl text-ink">Start a focus timer</p>
-            <p className="mt-1 text-sm text-ink-faint">
-              A shared countdown everyone in the room can see.
-            </p>
-            <div className="mt-3 flex justify-center gap-2">
-              {[25, 45, 60].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    ensureAudio();
-                    startAction(async () => {
-                      await startTimer(roomId, m);
-                      router.refresh();
-                    });
-                  }}
-                  className="btn-accent !py-1.5 text-sm"
-                >
-                  {m} min
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </section>
+  // Average time people have been sitting here, this session.
+  const avgMinutes = active.length
+    ? Math.round(
+        active.reduce(
+          (sum, p) => sum + (now - new Date(p.joined_at).getTime()) / 60_000,
+          0
+        ) / active.length
+      )
+    : 0;
 
-      {/* Your page */}
-      <section className="card p-5">
-        <h3 className="section-title mb-3 text-lg">Your progress</h3>
-        {me?.book_title ? (
-          <p className="mb-2 text-sm text-ink-soft">
-            Reading <span className="font-display font-semibold">{me.book_title}</span>
-          </p>
-        ) : (
-          <p className="mb-2 text-sm text-ink-faint">
-            Set a Currently Reading book on your profile to show it here.
-          </p>
-        )}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-ink-faint">Page</span>
-          <input
-            type="number"
-            min={0}
-            value={page}
-            onChange={(e) => setPage(Math.max(0, Number(e.target.value)))}
-            onBlur={() => setMyPage(page)}
-            className="input w-24 text-center"
-          />
-          <button onClick={() => setMyPage(page + 1)} className="btn-ghost !py-1.5 text-sm">
-            +1
-          </button>
-          <button onClick={() => setMyPage(page + 10)} className="btn-ghost !py-1.5 text-sm">
-            +10
+  return (
+    <div className="space-y-8">
+      {/* ---- Header: identity on the left, timer on the right ---- */}
+      <header className="sticky top-[57px] z-10 -mx-4 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-white/[0.06] bg-forest-dark/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <Link
+          href="/rooms"
+          className="font-mono text-sm text-ink-faint no-underline hover:text-brass"
+        >
+          ← All rooms
+        </Link>
+        <h1 className="font-display text-2xl font-semibold text-cream">
+          {roomName}
+        </h1>
+        <p className="font-mono text-xs text-brass/80">
+          {roomModeLabel(mode)} · {roomGenreLabel(genre)}
+        </p>
+
+        <div className="ml-auto flex items-center gap-3">
+          <span
+            className={`font-mono text-2xl tracking-widest ${
+              timerActive ? "text-cream" : "text-ink-faint"
+            }`}
+          >
+            {timerActive
+              ? fmt(remaining as number)
+              : `${String(preset)}:00`}
+          </span>
+
+          {!timerActive &&
+            [25, 45, 60].map((m) => (
+              <button
+                key={m}
+                onClick={() => setPreset(m)}
+                className={`rounded-pill border px-3 py-1 text-sm transition-colors ${
+                  preset === m
+                    ? "border-brass bg-brass text-forest-dark"
+                    : "border-parchment-dark text-ink-soft hover:text-ink"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+
+          {timerActive ? (
+            <button
+              onClick={() =>
+                startAction(async () => {
+                  await stopTimer(roomId);
+                  router.refresh();
+                })
+              }
+              className="btn-ghost !py-1.5 text-sm"
+            >
+              End
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                ensureAudio();
+                startAction(async () => {
+                  await startTimer(roomId, preset);
+                  router.refresh();
+                });
+              }}
+              className="btn-accent !py-1.5"
+            >
+              Start
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleMute}
+            title={muted ? "Chime muted. Tap to unmute" : "Mute the chime"}
+            aria-label={muted ? "Unmute chime" : "Mute chime"}
+            className={muted ? "text-ink-faint" : "text-brass"}
+          >
+            {muted ? "🔕" : "🔔"}
           </button>
         </div>
-      </section>
+      </header>
 
-      {/* Who's reading */}
-      <section className="card p-5">
-        <h3 className="section-title mb-3 text-lg">
-          Reading now{" "}
-          <span className="font-mono text-xs text-ink-faint">({active.length})</span>
-        </h3>
-        <ul className="space-y-3">
-          {active.map((p) => (
-            <li key={p.user_id} className="flex items-center gap-3">
-              <span className="relative">
-                <Avatar
-                  name={p.display_name ?? p.username}
-                  icon={p.avatar_icon}
-                  size={40}
-                />
-                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-pill border-2 border-parchment bg-forest-light" />
-              </span>
-              {p.book_title && (
+      {/* ---- The table ---- */}
+      <div className="text-center">
+        <h2 className="font-display text-2xl italic text-brass">
+          {countWord(active.length)}{" "}
+          {active.length === 1 ? "reader" : "readers"} at the table
+        </h2>
+        <p className="mt-1 font-mono text-xs text-ink-faint">
+          {avgMinutes > 0 ? `avg session ${avgMinutes} min` : "just settling in"}
+        </p>
+      </div>
+
+      <ul className="grid gap-5 md:grid-cols-2">
+        {active.map((p) => {
+          const isMe = p.user_id === meId;
+          const minutes = Math.max(
+            0,
+            Math.round((now - new Date(p.joined_at).getTime()) / 60_000)
+          );
+          const idleFor = now - new Date(p.last_seen).getTime();
+          const paused = idleFor > PAUSED_MS;
+
+          return (
+            <li
+              key={p.user_id}
+              className={`card flex gap-4 p-5 ${
+                isMe ? "!border-brass/50" : ""
+              }`}
+            >
+              {p.book_title ? (
                 <BookCover
                   coverId={p.book_cover_id}
                   title={p.book_title}
-                  size="S"
+                  size="M"
+                  className="shrink-0"
                 />
+              ) : (
+                <span className="h-[108px] w-[72px] shrink-0 rounded-[3px] border border-dashed border-parchment-dark" />
               )}
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={`/profile/${p.username}`}
-                  className="font-display font-semibold text-ink no-underline hover:text-brass"
-                >
-                  {p.display_name ?? p.username}
-                  {p.user_id === meId && " (you)"}
-                </Link>
-                <p className="truncate text-sm text-ink-faint">
-                  {p.book_title ?? "Reading"}
-                </p>
-              </div>
-              <span className="font-mono text-sm text-brass">p. {p.current_page}</span>
-            </li>
-          ))}
-          {active.length === 0 && (
-            <li className="text-sm text-ink-faint">Just you so far. Invite a friend.</li>
-          )}
-        </ul>
-      </section>
 
-      <div className="flex items-center justify-between">
-        <Link href="/rooms" className="link text-sm">
-          ← All rooms
-        </Link>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Avatar
+                    name={p.display_name ?? p.username}
+                    icon={p.avatar_icon}
+                    size={28}
+                  />
+                  <Link
+                    href={`/profile/${p.username}`}
+                    className="font-display text-lg font-semibold text-ink no-underline hover:text-brass"
+                  >
+                    {p.display_name ?? p.username}
+                    {isMe && " (you)"}
+                  </Link>
+                  <span className="ml-auto font-mono text-sm text-brass">
+                    p. {p.current_page}
+                  </span>
+                </div>
+
+                <p className="mt-2 truncate text-sm text-ink-soft">
+                  {p.book_title ?? "Reading"}
+                  {" · "}
+                  {paused
+                    ? `Paused · ${Math.round(idleFor / 60_000)} min ago`
+                    : `Reading · ${minutes} min`}
+                </p>
+
+                <div className="progress mt-3">
+                  <span style={{ width: `${Math.min(100, p.progress)}%` }} />
+                </div>
+
+                {isMe && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={page}
+                      onChange={(e) =>
+                        setPage(Math.max(0, Number(e.target.value)))
+                      }
+                      onBlur={() => setMyPage(page)}
+                      aria-label="Your page"
+                      className="input w-20 py-1.5 text-center"
+                    />
+                    <button
+                      onClick={() => setMyPage(page + 1)}
+                      className="btn-ghost !px-3 !py-1.5 text-sm"
+                    >
+                      +1
+                    </button>
+                    <button
+                      onClick={() => setMyPage(page + 10)}
+                      className="btn-ghost !px-3 !py-1.5 text-sm"
+                    >
+                      +10
+                    </button>
+                    <span className="ml-auto text-right font-mono text-[11px] leading-tight text-ink-faint">
+                      your
+                      <br />
+                      seat
+                    </span>
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+
+        {active.length === 0 && (
+          <li className="card p-6 text-center text-sm text-ink-faint md:col-span-2">
+            The table is empty. Settle in and someone may join you.
+          </li>
+        )}
+      </ul>
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <InviteReader roomId={roomId} />
         {amCreator && (
           <button
-            onClick={() => startAction(async () => { await deleteRoom(roomId); })}
-            className="font-mono text-xs text-ink-faint hover:text-oxblood"
+            onClick={() =>
+              startAction(async () => {
+                await deleteRoom(roomId);
+              })
+            }
+            className="font-mono text-sm text-ink-faint hover:text-oxblood"
           >
             delete room
           </button>

@@ -386,9 +386,29 @@ create table if not exists public.rooms (
   id            uuid primary key default gen_random_uuid(),
   name          text not null check (char_length(name) between 1 and 60),
   created_by    uuid references public.profiles (id) on delete set null,
+  -- General genre of the books read here. 'mixed' means anything goes.
+  genre         text not null default 'mixed',
+  -- quiet: no timer pressure. sprints: short timed bursts. open: come and go.
+  mode          text not null default 'quiet'
+                  check (mode in ('quiet', 'sprints', 'open')),
   timer_ends_at timestamptz,
   created_at    timestamptz not null default now()
 );
+
+create index if not exists rooms_genre_idx on public.rooms (genre);
+
+-- One reader inviting another into a room.
+create table if not exists public.room_invites (
+  room_id    uuid not null references public.rooms (id) on delete cascade,
+  inviter_id uuid not null references public.profiles (id) on delete cascade,
+  invitee_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (room_id, invitee_id),
+  check (inviter_id <> invitee_id)
+);
+
+create index if not exists room_invites_invitee_idx
+  on public.room_invites (invitee_id, created_at desc);
 
 create table if not exists public.room_participants (
   room_id       uuid not null references public.rooms (id) on delete cascade,
@@ -406,6 +426,26 @@ create index if not exists room_participants_room_idx
 
 alter table public.rooms enable row level security;
 alter table public.room_participants enable row level security;
+alter table public.room_invites enable row level security;
+
+drop policy if exists "invites visible to both sides" on public.room_invites;
+create policy "invites visible to both sides"
+  on public.room_invites for select
+  using (invitee_id = auth.uid() or inviter_id = auth.uid());
+
+drop policy if exists "readers send invites" on public.room_invites;
+create policy "readers send invites"
+  on public.room_invites for insert to authenticated
+  with check (
+    inviter_id = auth.uid()
+    and not public.has_blocked(invitee_id, auth.uid())
+    and not public.has_blocked(auth.uid(), invitee_id)
+  );
+
+drop policy if exists "either side clears an invite" on public.room_invites;
+create policy "either side clears an invite"
+  on public.room_invites for delete
+  using (invitee_id = auth.uid() or inviter_id = auth.uid());
 
 create policy "rooms are viewable by everyone"
   on public.rooms for select using (true);
