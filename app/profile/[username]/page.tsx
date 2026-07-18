@@ -295,7 +295,25 @@ export default async function ProfilePage({
               quotes: quotes.length,
               notes: notes.length,
             }}
-            shelf={<Shelf books={shelf} isSelf={isSelf} />}
+            shelf={
+              <div className="space-y-8">
+                <Shelf books={shelf} isSelf={isSelf} />
+
+                {/* The shelf doubles as an overview: the latest reads of every
+                    kind sit below the books. */}
+                <div>
+                  <h2 className="mb-3 font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+                    Recent reads
+                  </h2>
+                  {readList(
+                    feed.slice(0, 5),
+                    isSelf
+                      ? "No notes, quotes or reviews yet. Share your first read."
+                      : "No notes, quotes or reviews yet."
+                  )}
+                </div>
+              </div>
+            }
             reviews={readList(reviews, "No reviews yet.")}
             quotes={readList(quotes, "No quotes kept yet.")}
             notes={readList(notes, "No notes yet.")}

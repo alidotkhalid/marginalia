@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { BookResult } from "@/lib/openlibrary";
+import { coverUrl, type BookResult } from "@/lib/openlibrary";
 import { addReadBook, removeReadBook } from "@/app/actions";
 import { BookSearch } from "./BookSearch";
 import type { ReadBook } from "./ReadShelf";
@@ -73,14 +73,31 @@ export function Shelf({
         {books.map((b) => (
           <li key={b.book_id} className="group relative">
             <div
-              className="flex h-44 items-center justify-center rounded-card p-3 shadow-card ring-1 ring-black/30"
-              style={{ background: spineFor(b.title) }}
-              title={b.author ? `${b.title} — ${b.author}` : b.title}
+              className="h-44 overflow-hidden rounded-card shadow-card ring-1 ring-black/30"
+              title={b.author ? `${b.title}, ${b.author}` : b.title}
+              style={b.cover_id ? undefined : { background: spineFor(b.title) }}
             >
-              <span className="line-clamp-5 text-center font-display text-sm leading-snug text-cream">
-                {b.title}
-              </span>
+              {b.cover_id ? (
+                /* Real cover art from Open Library. */
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={coverUrl(b.cover_id, "L") ?? ""}
+                  alt={`Cover of ${b.title}`}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                /* No cover on file: fall back to a typographic spine. */
+                <span className="flex h-full items-center justify-center p-3">
+                  <span className="line-clamp-5 text-center font-display text-sm leading-snug text-cream">
+                    {b.title}
+                  </span>
+                </span>
+              )}
             </div>
+            <p className="mt-1.5 truncate text-center text-[11px] text-ink-faint">
+              {b.title}
+            </p>
             {isSelf && (
               <button
                 type="button"
