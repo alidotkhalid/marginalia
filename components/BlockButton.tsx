@@ -35,13 +35,14 @@ export function BlockButton({
     });
   }
 
+  // Sits beside Follow, in the same pill shape, but red so it reads as the
+  // destructive choice.
+  const pill =
+    "btn border border-oxblood text-oxblood hover:bg-oxblood hover:text-cream";
+
   if (blocked) {
     return (
-      <button
-        onClick={doUnblock}
-        disabled={pending}
-        className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-brass"
-      >
+      <button onClick={doUnblock} disabled={pending} className={pill}>
         Unblock
       </button>
     );
@@ -49,17 +50,17 @@ export function BlockButton({
 
   if (confirming) {
     return (
-      <span className="flex items-center gap-2 text-xs font-mono">
+      <span className="flex items-center gap-2">
         <button
           onClick={doBlock}
           disabled={pending}
-          className="uppercase tracking-wider text-oxblood hover:text-oxblood-light"
+          className="btn border border-oxblood bg-oxblood text-cream hover:bg-oxblood-light"
         >
-          Confirm block
+          Confirm
         </button>
         <button
           onClick={() => setConfirming(false)}
-          className="text-ink-faint hover:text-ink"
+          className="font-mono text-xs text-ink-faint hover:text-ink"
         >
           cancel
         </button>
@@ -68,10 +69,7 @@ export function BlockButton({
   }
 
   return (
-    <button
-      onClick={() => setConfirming(true)}
-      className="text-xs font-mono uppercase tracking-wider text-ink-faint hover:text-oxblood"
-    >
+    <button onClick={() => setConfirming(true)} className={pill}>
       Block
     </button>
   );

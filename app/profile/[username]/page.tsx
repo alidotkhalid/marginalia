@@ -251,11 +251,9 @@ export default async function ProfilePage({
             />
 
             {!isSelf && user && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  {myStatus === "accepted" && <AskButton targetId={profile.id} />}
-                  <FollowButton targetId={profile.id} initialStatus={myStatus} />
-                </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {myStatus === "accepted" && <AskButton targetId={profile.id} />}
+                <FollowButton targetId={profile.id} initialStatus={myStatus} />
                 <BlockButton targetId={profile.id} initialBlocked={iBlockedThem} />
               </div>
             )}
