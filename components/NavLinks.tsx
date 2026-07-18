@@ -23,7 +23,6 @@ export function NavLinks({
     { href: "/books", label: "Books" },
     ...(username ? [{ href: `/profile/${username}`, label: "Profile" }] : []),
     { href: "/requests", label: "Requests", badge: pendingRequests },
-    { href: "/customize", label: "Customize" },
     { href: "/settings", label: "Settings" },
   ];
 

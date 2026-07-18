@@ -10,6 +10,7 @@ import { AskButton } from "@/components/AskButton";
 import { CurrentlyReadingEditor } from "@/components/CurrentlyReadingEditor";
 import { EditableName } from "@/components/EditableName";
 import { EditableBio } from "@/components/EditableBio";
+import { EditableAvatar } from "@/components/EditableAvatar";
 import { Shelf } from "@/components/Shelf";
 import { StreakCard } from "@/components/StreakCard";
 import { ProfileTabs } from "@/components/ProfileTabs";
@@ -344,11 +345,18 @@ function ProfileCard({
   return (
     <section className="card p-6 text-center">
       <div className="flex justify-center">
-        <Avatar
-          name={displayName}
-          icon={(profile.avatar_icon as string | null) ?? null}
-          size={104}
-        />
+        {isSelf ? (
+          <EditableAvatar
+            name={displayName}
+            current={(profile.avatar_icon as string | null) ?? null}
+          />
+        ) : (
+          <Avatar
+            name={displayName}
+            icon={(profile.avatar_icon as string | null) ?? null}
+            size={104}
+          />
+        )}
       </div>
 
       <div className="mt-4">
