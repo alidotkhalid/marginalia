@@ -61,33 +61,11 @@ export default async function DiscoverPage({
     followedTags = new Set((tags ?? []).map((t) => t.tag));
   }
 
-  // ---- The shelves: every tagged read, reduced to counts and who writes them ----
-  const { data: tagRows } = await supabase
-    .from("feed_posts")
-    .select("author_id, genre")
-    .not("genre", "is", null)
-    .limit(4000);
+  // ---- The shelves: one aggregated row per tag (the tag_counts view) ----
+  const { data: tagRows } = await supabase.from("tag_counts").select("tag, posts");
 
-  const counts = new Map<string, number>();
-  const authorsByTag = new Map<string, Set<string>>();
-  const tagsByAuthor = new Map<string, Set<string>>();
-
-  for (const row of (tagRows ?? []) as { author_id: string; genre: string }[]) {
-    const g = row.genre;
-    if (!g) continue;
-    counts.set(g, (counts.get(g) ?? 0) + 1);
-
-    let authors = authorsByTag.get(g);
-    if (!authors) authorsByTag.set(g, (authors = new Set()));
-    authors.add(row.author_id);
-
-    let mine = tagsByAuthor.get(row.author_id);
-    if (!mine) tagsByAuthor.set(row.author_id, (mine = new Set()));
-    mine.add(g);
-  }
-
-  const shelves = [...counts.entries()]
-    .map(([slug, count]) => ({ slug, count }))
+  const shelves = ((tagRows ?? []) as { tag: string; posts: number }[])
+    .map((r) => ({ slug: r.tag, count: r.posts }))
     .sort((a, b) => b.count - a.count || a.slug.localeCompare(b.slug));
 
   // The selected shelf: the one asked for, else the busiest.
@@ -95,8 +73,6 @@ export default async function DiscoverPage({
     searchParams.tag && isGenre(searchParams.tag)
       ? searchParams.tag
       : shelves[0]?.slug ?? null;
-
-  const myTags = user ? tagsByAuthor.get(user.id) ?? new Set<string>() : new Set<string>();
 
   // ---- Readers and reads for this shelf (or for the search) ----
   let readers: ReaderRow[] = [];
@@ -123,7 +99,14 @@ export default async function DiscoverPage({
     readers = (profs ?? []) as unknown as ReaderRow[];
     reads = (postRows ?? []) as FeedPost[];
   } else if (activeTag) {
-    const ids = [...(authorsByTag.get(activeTag) ?? new Set<string>())]
+    // Who writes on this shelf, from the distinct author/tag pairs view.
+    const { data: authorRows } = await supabase
+      .from("author_tags")
+      .select("author_id")
+      .eq("tag", activeTag)
+      .limit(60);
+    const ids = ((authorRows ?? []) as { author_id: string }[])
+      .map((r) => r.author_id)
       .filter((id) => id !== user?.id && !blockedIds.has(id))
       .slice(0, 40);
 
@@ -149,7 +132,29 @@ export default async function DiscoverPage({
 
   readers = readers.filter((r) => r.id !== user?.id && !blockedIds.has(r.id));
 
-  // Shelves in common with the viewer, most overlap first.
+  // Shelves in common with the viewer: distinct author/tag pairs, but only for
+  // the readers actually being shown (plus the viewer), never the whole site.
+  const mutualIds = [
+    ...new Set([...readers.map((r) => r.id), ...(user ? [user.id] : [])]),
+  ];
+  let pairRows: { author_id: string; tag: string }[] = [];
+  if (mutualIds.length > 0) {
+    const { data } = await supabase
+      .from("author_tags")
+      .select("author_id, tag")
+      .in("author_id", mutualIds);
+    pairRows = (data ?? []) as { author_id: string; tag: string }[];
+  }
+  const tagsByAuthor = new Map<string, Set<string>>();
+  for (const p of pairRows) {
+    let s = tagsByAuthor.get(p.author_id);
+    if (!s) tagsByAuthor.set(p.author_id, (s = new Set()));
+    s.add(p.tag);
+  }
+  const myTags = user
+    ? tagsByAuthor.get(user.id) ?? new Set<string>()
+    : new Set<string>();
+
   const mutualOf = (id: string) => {
     const theirs = tagsByAuthor.get(id);
     if (!theirs) return 0;

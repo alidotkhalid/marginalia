@@ -12,18 +12,21 @@ type RoomRow = {
   timer_ends_at: string | null;
 };
 
-type PartRow = {
+type ActiveRow = {
   room_id: string;
-  user_id: string;
   book_title: string | null;
   book_cover_id: number | null;
-  joined_at: string;
-  last_seen: string;
   profiles: {
     username: string;
     display_name: string | null;
     avatar_icon: string | null;
   } | null;
+};
+
+type StatRow = {
+  room_id: string;
+  avg_minutes: number;
+  books: { title: string; cover: number | null }[] | null;
 };
 
 export default async function RoomsPage() {
@@ -38,22 +41,22 @@ export default async function RoomsPage() {
   // Sweep out rooms nobody has sat in for a month before listing.
   await supabase.rpc("cleanup_stale_rooms");
 
-  const [{ data: rooms }, { data: parts }, { data: invites }] =
+  const [{ data: rooms }, { data: activeParts }, { data: statRows }, { data: invites }] =
     await Promise.all([
       supabase
         .from("rooms")
         .select("id, name, genre, mode, timer_ends_at")
         .order("created_at", { ascending: false })
         .limit(60),
-      // Everyone who has ever sat in a room, so we can show the books read here
-      // and work out a typical session length.
+      // Only who is sitting in a room right now: a handful of rows at most.
       supabase
         .from("room_participants")
         .select(
-          "room_id, user_id, book_title, book_cover_id, joined_at, last_seen, profiles!user_id (username, display_name, avatar_icon)"
+          "room_id, book_title, book_cover_id, profiles!user_id (username, display_name, avatar_icon)"
         )
-        .order("last_seen", { ascending: false })
-        .limit(600),
+        .gt("last_seen", cutoff),
+      // Session averages and cover stacks, aggregated in Postgres.
+      supabase.from("room_stats").select("room_id, avg_minutes, books"),
       supabase
         .from("room_invites")
         .select(
@@ -63,41 +66,25 @@ export default async function RoomsPage() {
         .order("created_at", { ascending: false }),
     ]);
 
-  const partRows = (parts ?? []) as unknown as PartRow[];
-
-  // Group participants by room.
-  const grouped = new Map<string, PartRow[]>();
-  for (const p of partRows) {
-    const list = grouped.get(p.room_id);
+  const activeByRoom = new Map<string, ActiveRow[]>();
+  for (const p of (activeParts ?? []) as unknown as ActiveRow[]) {
+    const list = activeByRoom.get(p.room_id);
     if (list) list.push(p);
-    else grouped.set(p.room_id, [p]);
+    else activeByRoom.set(p.room_id, [p]);
   }
 
+  const statByRoom = new Map(
+    ((statRows ?? []) as unknown as StatRow[]).map((s) => [s.room_id, s])
+  );
+
   const cards: RoomCard[] = ((rooms ?? []) as RoomRow[]).map((r) => {
-    const all = grouped.get(r.id) ?? [];
-    const active = all.filter((p) => p.last_seen > cutoff);
+    const active = activeByRoom.get(r.id) ?? [];
+    const stat = statByRoom.get(r.id);
 
-    // A typical session: how long people stayed, averaged, in minutes.
-    const durations = all
-      .map(
-        (p) =>
-          (new Date(p.last_seen).getTime() - new Date(p.joined_at).getTime()) /
-          60_000
-      )
-      .filter((m) => m >= 1);
-    const avgMinutes = durations.length
-      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
-      : 0;
-
-    // De-duplicate the books on the shelf stack.
-    const seen = new Set<string>();
-    const covers: { id: number | null; title: string }[] = [];
-    for (const p of all) {
-      if (!p.book_title || seen.has(p.book_title)) continue;
-      seen.add(p.book_title);
-      covers.push({ id: p.book_cover_id, title: p.book_title });
-      if (covers.length === 4) break;
-    }
+    const covers = (stat?.books ?? []).map((b) => ({
+      id: b.cover ?? null,
+      title: b.title,
+    }));
 
     const people = active.map((p) => ({
       name: p.profiles?.display_name ?? p.profiles?.username ?? "reader",
@@ -108,9 +95,9 @@ export default async function RoomsPage() {
       r.name,
       r.genre,
       r.mode,
-      ...all.map((p) => p.book_title ?? ""),
-      ...all.map((p) => p.profiles?.username ?? ""),
-      ...all.map((p) => p.profiles?.display_name ?? ""),
+      ...covers.map((c) => c.title),
+      ...active.map((p) => p.profiles?.username ?? ""),
+      ...active.map((p) => p.profiles?.display_name ?? ""),
     ]
       .join(" ")
       .toLowerCase();
@@ -122,7 +109,7 @@ export default async function RoomsPage() {
       mode: r.mode ?? "quiet",
       readers: active.length,
       live: active.length > 0,
-      avgMinutes,
+      avgMinutes: stat?.avg_minutes ?? 0,
       covers,
       people,
       haystack,

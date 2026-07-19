@@ -18,12 +18,8 @@ export default async function TagsPage() {
   const [{ data: tagRows }, { data: genreRows }, { data: follows }] =
     await Promise.all([
       supabase.from("tag_follows").select("tag").eq("user_id", user.id),
-      // Every tagged read, so each tag can show how busy it is.
-      supabase
-        .from("feed_posts")
-        .select("genre")
-        .not("genre", "is", null)
-        .limit(4000),
+      // One aggregated row per tag (the tag_counts view).
+      supabase.from("tag_counts").select("tag, posts"),
       supabase
         .from("follows")
         .select("following_id, status")
@@ -32,10 +28,12 @@ export default async function TagsPage() {
 
   const tags = (tagRows ?? []).map((t) => t.tag as string);
 
-  const counts = new Map<string, number>();
-  for (const row of (genreRows ?? []) as { genre: string }[]) {
-    if (row.genre) counts.set(row.genre, (counts.get(row.genre) ?? 0) + 1);
-  }
+  const counts = new Map<string, number>(
+    ((genreRows ?? []) as { tag: string; posts: number }[]).map((r) => [
+      r.tag,
+      r.posts,
+    ])
+  );
 
   // Every genre, busiest first, so there is always something to follow.
   const shelves: TagShelf[] = GENRES.map((g) => ({

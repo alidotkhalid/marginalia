@@ -57,17 +57,32 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/api");
 
   if (user && !exempt) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("onboarded_at")
-      .eq("id", user.id)
-      .maybeSingle();
+    // Once a reader is known to be onboarded, a cookie remembers it (keyed to
+    // their id, so a different account on the same browser is still checked).
+    // Saves a database query on every navigation.
+    const ONB_COOKIE = "m_onb";
+    if (request.cookies.get(ONB_COOKIE)?.value !== user.id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarded_at")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    if (profile && !profile.onboarded_at) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/welcome";
-      url.search = "";
-      return NextResponse.redirect(url);
+      if (profile && !profile.onboarded_at) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/welcome";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+
+      if (profile?.onboarded_at) {
+        response.cookies.set(ONB_COOKIE, user.id, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 365,
+          httpOnly: true,
+          sameSite: "lax",
+        });
+      }
     }
   }
 
