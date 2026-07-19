@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "./Avatar";
+import { Modal } from "./Modal";
 
 export type Person = {
   id: string;
@@ -28,17 +29,6 @@ export function PeopleStat({
 }) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
   // Nothing to show: keep it as plain text so it doesn't invite a click.
   if (people.length === 0) {
     return (
@@ -62,20 +52,8 @@ export function PeopleStat({
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={label}
-        >
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-            className="absolute inset-0 cursor-default bg-black/70 backdrop-blur-sm"
-          />
-
-          <div className="card relative max-h-[80vh] w-full max-w-sm overflow-y-auto p-6">
+        <Modal label={label} onClose={() => setOpen(false)} maxWidth="max-w-sm">
+          <div>
             <div className="mb-4 flex items-center justify-between gap-4">
               <h2 className="font-display text-xl italic text-brass">
                 {label}
@@ -122,7 +100,7 @@ export function PeopleStat({
               </ul>
             )}
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );

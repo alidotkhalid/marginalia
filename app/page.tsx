@@ -59,7 +59,7 @@ export default async function FeedPage({
     supabase
       .from("profiles")
       .select(
-        "username, display_name, avatar_icon, reading_progress, books!currently_reading (title)"
+        "username, display_name, avatar_icon, reading_progress, tz, books!currently_reading (title)"
       )
       .eq("id", user.id)
       .single(),
@@ -76,10 +76,20 @@ export default async function FeedPage({
 
   // "Live" means seen in a room in the last three minutes.
   const liveCutoff = new Date(Date.now() - 3 * 60_000).toISOString();
+
+  // Days are counted in the reader's own timezone (activity_days stores local
+  // days), so the week bars must be built the same way.
+  const tz = (me?.tz as string | null) ?? "UTC";
+  const dayInTz = (daysAgo: number) => {
+    const when = new Date(Date.now() - daysAgo * 86_400_000);
+    try {
+      return when.toLocaleDateString("en-CA", { timeZone: tz });
+    } catch {
+      return when.toISOString().slice(0, 10);
+    }
+  };
   // The streak bars cover the last seven days, today last.
-  const weekStart = new Date(Date.now() - 6 * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  const weekStart = dayInTz(6);
 
   const [{ data: posts }, { data: live }, { data: days }, { data: streakRows }] =
     await Promise.all([
@@ -128,12 +138,9 @@ export default async function FeedPage({
   const activeDays = new Set(
     ((days ?? []) as { day: string }[]).map((d) => String(d.day).slice(0, 10))
   );
-  const week = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(Date.now() - (6 - i) * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    return activeDays.has(d);
-  });
+  const week = Array.from({ length: 7 }, (_, i) =>
+    activeDays.has(dayInTz(6 - i))
+  );
 
   const streak =
     (streakRows as unknown as { current_days: number }[] | null)?.[0]

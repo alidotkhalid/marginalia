@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { coverUrl, type BookResult } from "@/lib/openlibrary";
 import { addReadBook, removeReadBook } from "@/app/actions";
 import { BookSearch } from "./BookSearch";
-import type { ReadBook } from "./ReadShelf";
+
+export type ReadBook = {
+  book_id: string;
+  title: string;
+  author: string | null;
+  cover_id: number | null;
+};
 
 // Muted spine colours, in the order they appear on a well-worn shelf.
 const SPINES = [

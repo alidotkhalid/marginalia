@@ -771,6 +771,21 @@ export async function inviteToRoom(roomId: string, username: string) {
   };
 }
 
+/**
+ * Quietly store the browser's IANA timezone so streak days match the reader's
+ * own midnight. Validation happens in the database function.
+ */
+export async function syncTimezone(tz: string) {
+  if (!/^[A-Za-z0-9_+\-/]{1,64}$/.test(tz)) return;
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.rpc("set_timezone", { new_tz: tz });
+}
+
 /** Mark Notifications as read, clearing the dot on the nav tab. */
 export async function markNotificationsSeen() {
   const supabase = createClient();

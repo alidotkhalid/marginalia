@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateAvatarIcon } from "@/app/actions";
 import { avatarLabel } from "@/lib/avatarIcons";
 import { Avatar } from "./Avatar";
 import { AvatarGrid } from "./AvatarGrid";
+import { Modal } from "./Modal";
 import { Spinner } from "./Spinner";
 
 /**
@@ -24,19 +25,6 @@ export function EditableAvatar({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string>(current ?? "");
   const [pending, startTransition] = useTransition();
-
-  // Escape closes the panel, and the page behind it should not scroll.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
 
   function close() {
     setSelected(current ?? "");
@@ -64,65 +52,50 @@ export function EditableAvatar({
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Choose your avatar"
-        >
-          {/* Backdrop */}
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={close}
-            className="absolute inset-0 cursor-default bg-black/70 backdrop-blur-sm"
-          />
-
-          <div className="card relative max-h-[85vh] w-full max-w-lg overflow-y-auto p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="font-display text-xl italic text-brass">
-                Choose your avatar
-              </h2>
-              <button
-                type="button"
-                onClick={close}
-                className="font-mono text-xs text-ink-faint hover:text-ink"
-              >
-                close
-              </button>
-            </div>
-
-            <div className="mb-5 flex items-center gap-3">
-              <Avatar name={name} icon={selected || null} size={56} />
-              <p className="text-sm text-ink-faint">
-                {selected
-                  ? avatarLabel(selected)
-                  : "Chosen for you, from your name."}
-              </p>
-            </div>
-
-            <AvatarGrid name={name} selected={selected} onSelect={setSelected} />
-
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={close}
-                className="font-mono text-xs text-ink-faint hover:text-oxblood"
-              >
-                cancel
-              </button>
-              <button
-                type="button"
-                onClick={save}
-                disabled={pending}
-                className="btn-accent"
-              >
-                {pending && <Spinner inline />}
-                {pending ? "Saving…" : "Save avatar"}
-              </button>
-            </div>
+        <Modal label="Choose your avatar" onClose={close}>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-display text-xl italic text-brass">
+              Choose your avatar
+            </h2>
+            <button
+              type="button"
+              onClick={close}
+              className="font-mono text-xs text-ink-faint hover:text-ink"
+            >
+              close
+            </button>
           </div>
-        </div>
+
+          <div className="mb-5 flex items-center gap-3">
+            <Avatar name={name} icon={selected || null} size={56} />
+            <p className="text-sm text-ink-faint">
+              {selected
+                ? avatarLabel(selected)
+                : "Chosen for you, from your name."}
+            </p>
+          </div>
+
+          <AvatarGrid name={name} selected={selected} onSelect={setSelected} />
+
+          <div className="mt-6 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={close}
+              className="font-mono text-xs text-ink-faint hover:text-oxblood"
+            >
+              cancel
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="btn-accent"
+            >
+              {pending && <Spinner inline />}
+              {pending ? "Saving…" : "Save avatar"}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

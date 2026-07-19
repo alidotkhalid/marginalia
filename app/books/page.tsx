@@ -51,44 +51,31 @@ export default async function BooksPage({
   return (
     <div className="mx-auto max-w-shell space-y-6">
       <div>
-        <h1 className="mb-1 font-display text-3xl font-bold text-cream">Books</h1>
-        <p className="text-sm text-cream-soft">
+        <h1 className="font-display text-5xl font-bold text-cream">Books</h1>
+        <p className="mt-2 text-sm text-ink-soft">
           Discover your next read. Browse by genre or by mood.
         </p>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        <Link
-          href="/books?by=genre"
-          className={`rounded-pill border px-4 py-1.5 text-sm font-medium transition-colors ${
-            by === "genre"
-              ? "border-brass bg-brass/15 text-brass"
-              : "border-parchment-dark text-cream-soft hover:border-brass"
-          }`}
-        >
-          By genre
-        </Link>
-        <Link
-          href="/books?by=mood"
-          className={`rounded-pill border px-4 py-1.5 text-sm font-medium transition-colors ${
-            by === "mood"
-              ? "border-brass bg-brass/15 text-brass"
-              : "border-parchment-dark text-cream-soft hover:border-brass"
-          }`}
-        >
-          By mood
-        </Link>
-        <Link
-          href="/books?by=author"
-          className={`rounded-pill border px-4 py-1.5 text-sm font-medium transition-colors ${
-            by === "author"
-              ? "border-brass bg-brass/15 text-brass"
-              : "border-parchment-dark text-cream-soft hover:border-brass"
-          }`}
-        >
-          By author
-        </Link>
+      {/* Filter tabs: same pill language as the rest of the site */}
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["genre", "By genre"],
+            ["mood", "By mood"],
+            ["author", "By author"],
+          ] as const
+        ).map(([slug, label]) => (
+          <Link
+            key={slug}
+            href={`/books?by=${slug}`}
+            className={`profile-tab no-underline ${
+              by === slug ? "profile-tab-active" : ""
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {/* Options for the active filter */}
@@ -100,20 +87,20 @@ export default async function BooksPage({
             name="author"
             defaultValue={authorQuery}
             placeholder="Type an author's name…"
-            className="input"
+            className="input py-3 sm:max-w-md"
             aria-label="Author name"
           />
         </form>
       ) : (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
           {options.map((o) => (
             <Link
               key={o.slug}
               href={`/books?by=${by}&tag=${o.slug}`}
-              className={`rounded-pill border px-3 py-1 font-mono text-xs transition-colors ${
+              className={`rounded-pill border px-3 py-1 font-mono text-xs no-underline transition-colors ${
                 activeTag === o.slug
-                  ? "border-brass bg-brass/15 text-brass"
-                  : "border-parchment-dark text-cream-soft hover:border-brass hover:text-brass"
+                  ? "border-brass/40 bg-brass/15 text-brass"
+                  : "border-parchment-dark text-ink-soft hover:border-brass/50 hover:text-ink"
               }`}
             >
               {o.label}
@@ -123,14 +110,18 @@ export default async function BooksPage({
       )}
 
       {by === "author" && !authorQuery ? (
-        <div className="card p-6 text-center text-ink-faint">
+        <div className="card p-8 text-center text-ink-faint">
           Type an author&rsquo;s name above to see their books.
         </div>
       ) : (
         <>
-          {activeLabel && <h2 className="section-title text-lg">{activeLabel}</h2>}
+          {activeLabel && (
+            <h2 className="font-display text-2xl font-semibold text-ink">
+              {activeLabel}
+            </h2>
+          )}
           {books.length === 0 ? (
-            <div className="card p-6 text-center text-ink-faint">
+            <div className="card p-8 text-center text-ink-faint">
               {by === "author"
                 ? "No books found for that author. Try another spelling."
                 : "Couldn't find books for this right now. Try another."}

@@ -12,10 +12,9 @@ import { EditableName } from "@/components/EditableName";
 import { EditableBio } from "@/components/EditableBio";
 import { EditableAvatar } from "@/components/EditableAvatar";
 import { PeopleStat, type Person } from "@/components/PeopleStat";
-import { Shelf } from "@/components/Shelf";
+import { Shelf, type ReadBook } from "@/components/Shelf";
 import { StreakCard } from "@/components/StreakCard";
 import { ProfileTabs } from "@/components/ProfileTabs";
-import type { ReadBook } from "@/components/ReadShelf";
 import type { PostKind } from "@/lib/constants";
 import type { FollowStatus } from "@/app/actions";
 

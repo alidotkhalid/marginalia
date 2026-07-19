@@ -5,12 +5,31 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { Logo } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
+import { TimezoneSync } from "@/components/TimezoneSync";
 import { signOut } from "./actions";
 
+const DESCRIPTION =
+  "A distraction-free, text-first social network for book lovers. No algorithms, no video, no infinite scroll.";
+
 export const metadata: Metadata = {
-  title: "Marginaly",
-  description:
-    "A distraction-free, text-first social network for book lovers. No algorithms, no video, no infinite scroll.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://marginalia-ivory.vercel.app"
+  ),
+  title: { default: "Marginaly", template: "%s · Marginaly" },
+  description: DESCRIPTION,
+  openGraph: {
+    title: "Marginaly",
+    description: DESCRIPTION,
+    siteName: "Marginaly",
+    type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Marginaly" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Marginaly",
+    description: DESCRIPTION,
+    images: ["/og.png"],
+  },
 };
 
 export default async function RootLayout({
@@ -89,6 +108,7 @@ export default async function RootLayout({
           </div>
         </header>
 
+        {user && <TimezoneSync />}
         <main className="mx-auto max-w-shell px-4 py-8 sm:px-6">{children}</main>
 
         <footer className="mx-auto max-w-shell px-4 py-10 text-center text-xs text-cream-soft sm:px-6">

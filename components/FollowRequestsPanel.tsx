@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Modal } from "./Modal";
 
 /**
  * The follow-requests strip that sits at the top of Notifications. Clicking it
@@ -15,17 +16,6 @@ export function FollowRequestsPanel({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open]);
 
   return (
     <>
@@ -50,35 +40,21 @@ export function FollowRequestsPanel({
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Follow requests"
-        >
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-            className="absolute inset-0 cursor-default bg-black/70 backdrop-blur-sm"
-          />
-
-          <div className="card relative max-h-[85vh] w-full max-w-lg overflow-y-auto p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="font-display text-xl italic text-brass">
-                Follow requests
-              </h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="font-mono text-xs text-ink-faint hover:text-ink"
-              >
-                close
-              </button>
-            </div>
-            {children}
+        <Modal label="Follow requests" onClose={() => setOpen(false)}>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-display text-xl italic text-brass">
+              Follow requests
+            </h2>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="font-mono text-xs text-ink-faint hover:text-ink"
+            >
+              close
+            </button>
           </div>
-        </div>
+          {children}
+        </Modal>
       )}
     </>
   );
