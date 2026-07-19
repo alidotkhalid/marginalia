@@ -35,6 +35,9 @@ export default async function RoomsPage() {
 
   const cutoff = new Date(Date.now() - 3 * 60_000).toISOString();
 
+  // Sweep out rooms nobody has sat in for a month before listing.
+  await supabase.rpc("cleanup_stale_rooms");
+
   const [{ data: rooms }, { data: parts }, { data: invites }] =
     await Promise.all([
       supabase

@@ -34,6 +34,15 @@ export default function LoginPage({
         <button type="submit" className="btn-primary w-full">
           Log in
         </button>
+
+        <p className="text-center">
+          <Link
+            href="/reset"
+            className="font-mono text-xs text-ink-faint hover:text-brass"
+          >
+            Forgot your password?
+          </Link>
+        </p>
       </form>
 
       <p className="mt-4 text-center text-sm text-cream-soft">

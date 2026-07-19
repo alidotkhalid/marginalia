@@ -43,8 +43,11 @@ export async function signup(formData: FormData) {
     options: {
       // The DB trigger reads username from this metadata to create the profile.
       data: { username },
-      // After clicking the link in the email, land on the welcome flow.
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/welcome`,
+      // The emailed link lands on our auth handler, which signs them in and
+      // forwards to the welcome flow.
+      emailRedirectTo: `${
+        process.env.NEXT_PUBLIC_SITE_URL ?? ""
+      }/auth/confirm?next=/welcome`,
     },
   });
 
@@ -62,4 +65,52 @@ export async function signup(formData: FormData) {
 
   // Confirmation is off, so they are already signed in. Straight to setup.
   redirect("/welcome");
+}
+
+/** Email a password-reset link. Never reveals whether the address exists. */
+export async function requestPasswordReset(formData: FormData) {
+  const supabase = createClient();
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) redirect("/reset");
+
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${
+      process.env.NEXT_PUBLIC_SITE_URL ?? ""
+    }/auth/confirm?next=/reset/update`,
+  });
+
+  // Same response either way, so the form can't be used to probe for accounts.
+  redirect(`/reset?sent=${encodeURIComponent(email)}`);
+}
+
+/** Set a new password. Requires the session created by the reset link. */
+export async function updatePassword(formData: FormData) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "That reset link has expired. Request a new one."
+      )}`
+    );
+  }
+
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) {
+    redirect(
+      `/reset/update?error=${encodeURIComponent(
+        "Use at least 8 characters."
+      )}`
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    redirect(`/reset/update?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/");
 }
