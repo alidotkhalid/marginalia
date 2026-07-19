@@ -41,9 +41,11 @@ export function NavLinks({
         >
           {it.label}
           {it.badge && it.badge > 0 ? (
-            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-oxblood px-1 text-[10px] font-bold text-cream">
-              {it.badge}
-            </span>
+            <span
+              className="notif-dot"
+              title={`${it.badge} new`}
+              aria-label={`${it.badge} new notifications`}
+            />
           ) : null}
         </Link>
       ))}

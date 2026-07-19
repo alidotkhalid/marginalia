@@ -32,6 +32,8 @@ create table if not exists public.profiles (
   avatar_icon         text,
   -- When the reader finished the welcome flow. Null means they still owe it.
   onboarded_at        timestamptz,
+  -- When they last opened Notifications, used to work out what is new.
+  notifications_seen_at timestamptz not null default now(),
   created_at          timestamptz not null default now()
 );
 

@@ -157,6 +157,15 @@
     color: #c9a961;
   }
 
+  /* Unread marker on the Notifications tab: a small gold dot that breathes */
+  .notif-dot {
+    @apply ml-1.5 inline-block h-2 w-2 shrink-0 rounded-pill align-middle;
+    background-color: theme("colors.brass.light");
+    box-shadow: 0 0 6px 1px rgba(221, 186, 108, 0.75),
+      0 0 12px 2px rgba(221, 186, 108, 0.35);
+    animation: notif-glow 2s ease-in-out infinite;
+  }
+
   /* Profile tab bar: same pill language as the site nav */
   .profile-tab {
     @apply inline-flex items-center rounded-pill px-5 py-2 text-sm transition-colors;
@@ -246,5 +255,25 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes notif-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 6px 1px rgba(221, 186, 108, 0.75),
+      0 0 12px 2px rgba(221, 186, 108, 0.35);
+  }
+  50% {
+    opacity: 0.75;
+    box-shadow: 0 0 3px 1px rgba(221, 186, 108, 0.5),
+      0 0 7px 2px rgba(221, 186, 108, 0.2);
+  }
+}
+
+/* Respect a reader's preference for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .notif-dot {
+    animation: none;
   }
 }

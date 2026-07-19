@@ -6,6 +6,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { FollowRequestActions } from "@/components/FollowRequestActions";
 import { FollowRequestsPanel } from "@/components/FollowRequestsPanel";
 import { RoomInviteRow } from "@/components/RoomInviteRow";
+import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { roomGenreLabel, roomModeLabel } from "@/lib/rooms";
 import type { FollowStatus } from "@/app/actions";
 
@@ -30,6 +31,15 @@ type Item =
       roomName: string;
       genre: string;
       mode: string;
+    }
+  | {
+      kind: "comment";
+      at: string;
+      person: Person;
+      body: string;
+      readKind: string;
+      bookTitle: string | null;
+      authorUsername: string;
     };
 
 function timeAgo(iso: string) {
@@ -93,6 +103,52 @@ export default async function NotificationsPage() {
     statusByUser.set(f.following_id, (f.status as FollowStatus) ?? "accepted");
   }
 
+  // My handle, so a comment can link back to the read on my profile.
+  const { data: meProfile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
+  const profileUsername = (meProfile?.username as string | null) ?? "";
+
+  // Comments left on my reads by anyone but me.
+  const { data: myPosts } = await supabase
+    .from("posts")
+    .select("id, kind, books ( title )")
+    .eq("author_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const postMeta = new Map<string, { kind: string; title: string | null }>();
+  for (const p of (myPosts ?? []) as unknown as {
+    id: string;
+    kind: string;
+    books: { title: string } | null;
+  }[]) {
+    postMeta.set(p.id, { kind: p.kind ?? "note", title: p.books?.title ?? null });
+  }
+
+  let commentRows: {
+    id: string;
+    body: string;
+    created_at: string;
+    post_id: string;
+    author: Person;
+  }[] = [];
+
+  if (postMeta.size > 0) {
+    const { data } = await supabase
+      .from("comments")
+      .select(
+        "id, body, created_at, post_id, author:profiles!author_id (username, display_name, avatar_icon)"
+      )
+      .in("post_id", [...postMeta.keys()])
+      .neq("author_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    commentRows = (data ?? []) as unknown as typeof commentRows;
+  }
+
   const requests = (requestRows ?? []) as unknown as {
     follower_id: string;
     created_at: string;
@@ -132,10 +188,26 @@ export default async function NotificationsPage() {
     });
   }
 
+  for (const c of commentRows) {
+    const meta = postMeta.get(c.post_id);
+    items.push({
+      kind: "comment",
+      at: c.created_at,
+      person: c.author,
+      body: c.body,
+      readKind: meta?.kind ?? "note",
+      bookTitle: meta?.title ?? null,
+      authorUsername: (profileUsername ?? "") as string,
+    });
+  }
+
   items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      {/* Opening the page clears the nav dot. */}
+      <MarkNotificationsSeen />
+
       <div>
         <h1 className="font-display text-5xl font-bold text-cream">
           Notifications
@@ -190,7 +262,9 @@ export default async function NotificationsPage() {
               key={
                 it.kind === "follow"
                   ? `f-${it.personId}`
-                  : `i-${it.roomId}-${it.at}`
+                  : it.kind === "invite"
+                  ? `i-${it.roomId}-${it.at}`
+                  : `c-${it.at}-${it.person?.username ?? ""}`
               }
               className="flex flex-wrap items-center gap-4 py-4"
             >
@@ -212,7 +286,7 @@ export default async function NotificationsPage() {
                   </Link>{" "}
                   {it.kind === "follow" ? (
                     "started following you."
-                  ) : (
+                  ) : it.kind === "invite" ? (
                     <>
                       invited you to{" "}
                       <Link
@@ -223,9 +297,30 @@ export default async function NotificationsPage() {
                       </Link>
                       .
                     </>
+                  ) : (
+                    <>
+                      commented on your {it.readKind}
+                      {it.bookTitle && (
+                        <>
+                          {" "}
+                          of{" "}
+                          <span className="font-display font-semibold text-ink">
+                            {it.bookTitle}
+                          </span>
+                        </>
+                      )}
+                      .
+                    </>
                   )}
                 </p>
-                <p className="font-mono text-xs text-ink-faint">
+
+                {it.kind === "comment" && (
+                  <p className="mt-1 line-clamp-2 border-l-2 border-brass/30 pl-3 text-sm italic text-ink-soft">
+                    {it.body}
+                  </p>
+                )}
+
+                <p className="mt-1 font-mono text-xs text-ink-faint">
                   {timeAgo(it.at)}
                   {it.kind === "invite" && (
                     <span className="ml-2 text-brass/80">
@@ -240,8 +335,15 @@ export default async function NotificationsPage() {
                   targetId={it.personId}
                   initialStatus={statusByUser.get(it.personId) ?? "none"}
                 />
-              ) : (
+              ) : it.kind === "invite" ? (
                 <RoomInviteRow roomId={it.roomId} />
+              ) : (
+                <Link
+                  href={`/profile/${it.authorUsername}`}
+                  className="btn-ghost !py-1.5 text-sm no-underline"
+                >
+                  View read
+                </Link>
               )}
             </li>
           ))}

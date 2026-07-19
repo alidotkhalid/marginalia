@@ -767,6 +767,18 @@ export async function inviteToRoom(roomId: string, username: string) {
   };
 }
 
+/** Mark Notifications as read, clearing the dot on the nav tab. */
+export async function markNotificationsSeen() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.rpc("mark_notifications_seen");
+  revalidatePath("/", "layout");
+}
+
 /** Clear an invitation: the invitee dismisses it, or the inviter retracts it. */
 export async function dismissRoomInvite(roomId: string) {
   const supabase = createClient();
