@@ -39,14 +39,16 @@ type Item =
       body: string;
       readKind: string;
       bookTitle: string | null;
-      authorUsername: string;
+      postId: string;
+      commentId: string;
     }
   | {
       kind: "mention";
       at: string;
       person: Person;
       body: string;
-      readAuthor: string;
+      postId: string;
+      commentId: string;
     };
 
 function timeAgo(iso: string) {
@@ -109,14 +111,6 @@ export default async function NotificationsPage() {
   for (const f of myFollows ?? []) {
     statusByUser.set(f.following_id, (f.status as FollowStatus) ?? "accepted");
   }
-
-  // My handle, so a comment can link back to the read on my profile.
-  const { data: meProfile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .maybeSingle();
-  const profileUsername = (meProfile?.username as string | null) ?? "";
 
   // Comments left on my reads by anyone but me.
   const { data: myPosts } = await supabase
@@ -199,18 +193,19 @@ export default async function NotificationsPage() {
   const { data: mentionRows } = await supabase
     .from("mentions")
     .select(
-      "created_at, comments!comment_id ( body, author:profiles!author_id (username, display_name, avatar_icon), post:posts!post_id ( author:profiles!author_id (username) ) )"
+      "comment_id, created_at, comments!comment_id ( post_id, body, author:profiles!author_id (username, display_name, avatar_icon) )"
     )
     .eq("mentioned_id", user.id)
     .order("created_at", { ascending: false })
     .limit(30);
 
   for (const m of (mentionRows ?? []) as unknown as {
+    comment_id: string;
     created_at: string;
     comments: {
+      post_id: string;
       body: string;
       author: Person;
-      post: { author: { username: string } | null } | null;
     } | null;
   }[]) {
     if (!m.comments) continue;
@@ -219,7 +214,8 @@ export default async function NotificationsPage() {
       at: m.created_at,
       person: m.comments.author,
       body: m.comments.body,
-      readAuthor: m.comments.post?.author?.username ?? "",
+      postId: m.comments.post_id,
+      commentId: m.comment_id,
     });
   }
 
@@ -232,7 +228,8 @@ export default async function NotificationsPage() {
       body: c.body,
       readKind: meta?.kind ?? "note",
       bookTitle: meta?.title ?? null,
-      authorUsername: (profileUsername ?? "") as string,
+      postId: c.post_id,
+      commentId: c.id,
     });
   }
 
@@ -376,9 +373,7 @@ export default async function NotificationsPage() {
                 <RoomInviteRow roomId={it.roomId} />
               ) : (
                 <Link
-                  href={`/profile/${
-                    it.kind === "comment" ? it.authorUsername : it.readAuthor
-                  }`}
+                  href={`/read/${it.postId}?comment=${it.commentId}`}
                   className="btn-ghost !py-1.5 text-sm no-underline"
                 >
                   View read

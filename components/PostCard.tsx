@@ -72,12 +72,18 @@ export function PostCard({
   followStatus,
   compact = false,
   variant = "default",
+  commentsOpen = false,
+  highlightCommentId = null,
 }: {
   post: FeedPost;
   currentUserId?: string;
   followStatus?: FollowStatus;
   compact?: boolean;
   variant?: "default" | "feed";
+  /** Open the comment thread immediately (permalink pages). */
+  commentsOpen?: boolean;
+  /** Comment to highlight once the thread loads. */
+  highlightCommentId?: string | null;
 }) {
   const isOwn = !!currentUserId && currentUserId === post.author_id;
   const showFollow =
@@ -318,6 +324,8 @@ export function PostCard({
         count={post.comment_count ?? 0}
         currentUserId={currentUserId}
         isPostOwner={isOwn}
+        initialOpen={commentsOpen}
+        highlightId={highlightCommentId}
         actions={
           <SaveButton
             postId={post.id}

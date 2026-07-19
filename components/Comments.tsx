@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -47,6 +47,8 @@ export function Comments({
   currentUserId,
   isPostOwner = false,
   actions,
+  initialOpen = false,
+  highlightId = null,
 }: {
   postId: string;
   count: number;
@@ -54,9 +56,13 @@ export function Comments({
   /** The signed-in reader wrote this read, so they can moderate its comments. */
   isPostOwner?: boolean;
   actions?: React.ReactNode;
+  /** Open and load the thread immediately (permalinks from notifications). */
+  initialOpen?: boolean;
+  /** Comment to highlight and scroll to once loaded. */
+  highlightId?: string | null;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [comments, setComments] = useState<CommentRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [body, setBody] = useState("");
@@ -70,6 +76,20 @@ export function Comments({
     setComments(data);
     setLoading(false);
   }
+
+  // Permalink arrival: fetch the thread without waiting for a click, then
+  // bring the named comment into view.
+  useEffect(() => {
+    if (initialOpen && comments === null) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!highlightId || comments === null) return;
+    const el = document.getElementById(`comment-${highlightId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comments === null]);
 
   function toggle() {
     if (!open && comments === null) load();
@@ -127,7 +147,14 @@ export function Comments({
   // Render one comment. Kept as a plain function (not a nested component) so
   // typing in a reply box doesn't lose focus on re-render.
   const renderComment = (c: CommentRow, isReply: boolean) => (
-    <div className="flex gap-2">
+    <div
+      id={`comment-${c.id}`}
+      className={`flex gap-2 ${
+        highlightId === c.id
+          ? "rounded-card border border-brass/40 bg-brass/[0.08] p-2 -m-2"
+          : ""
+      }`}
+    >
       <Link href={`/profile/${c.author?.username ?? ""}`}>
         <Avatar
           name={c.author?.display_name ?? c.author?.username ?? "?"}
