@@ -11,9 +11,11 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  // Only ever redirect within the site.
+  // Only ever redirect within the site. A single leading slash is required and
+  // a second slash (or backslash) is refused: "//evil.com" and "/\evil.com"
+  // are protocol-relative URLs that would leave the site.
   const nextParam = searchParams.get("next") ?? "/";
-  const next = nextParam.startsWith("/") ? nextParam : "/";
+  const next = /^\/(?![/\\])/.test(nextParam) ? nextParam : "/";
 
   const supabase = createClient();
 

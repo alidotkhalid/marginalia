@@ -6,7 +6,9 @@ import { searchBooks } from "@/lib/openlibrary";
 // User-Agent + field selection + caching in one place).
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q") ?? "";
+  // Bounded input: no relaying arbitrary payloads to Open Library.
+  const q = (searchParams.get("q") ?? "").trim().slice(0, 80);
+  if (q.length < 2) return NextResponse.json({ results: [] });
   const results = await searchBooks(q, 8);
   return NextResponse.json({ results });
 }
