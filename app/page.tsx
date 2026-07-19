@@ -5,6 +5,7 @@ import { PostCard, type FeedPost } from "@/components/PostCard";
 import { Greeting } from "@/components/Greeting";
 import { StreakPanel } from "@/components/StreakPanel";
 import { RoomLiveBar } from "@/components/RoomLiveBar";
+import { LandingPage } from "@/components/LandingPage";
 import type { BookResult } from "@/lib/openlibrary";
 
 type CurrentBook = { title: string } | null;
@@ -21,17 +22,8 @@ export default async function FeedPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return (
-      <p className="text-center text-cream-soft">
-        Please{" "}
-        <Link href="/login" className="text-brass hover:text-brass-light">
-          log in
-        </Link>{" "}
-        to read your feed.
-      </p>
-    );
-  }
+  // Signed out, the home route is the front door.
+  if (!user) return <LandingPage />;
 
   // If ?draft=id is present, load that draft into the composer.
   let initialDraft: DraftInit | undefined;

@@ -36,11 +36,9 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // Gate the home feed and profile editing behind auth.
-  const protectedPaths = ["/", "/settings"];
-  const isProtected = protectedPaths.some(
-    (p) => path === p || path.startsWith("/settings")
-  );
+  // Gate profile editing behind auth. The home route stays open: signed out,
+  // it shows the landing page.
+  const isProtected = path.startsWith("/settings");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
