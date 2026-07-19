@@ -126,6 +126,7 @@ export default async function ProfilePage({
   // Content is only fetched/shown when the viewer is allowed to see it.
   let feed: FeedPost[] = [];
   let shelf: ReadBook[] = [];
+  let toRead: ReadBook[] = [];
   let streak = { current: 0, best: 0 };
   const currentBook = canView ? (profile.books as unknown as CurrentBook) : null;
   const progress = (profile.reading_progress as number) ?? 0;
@@ -141,28 +142,32 @@ export default async function ProfilePage({
           .limit(100),
         supabase
           .from("read_books")
-          .select("book_id, finished_at, books ( title, author, cover_id )")
+          .select(
+            "book_id, status, finished_at, books ( title, author, cover_id )"
+          )
           .eq("user_id", profile.id)
           .order("finished_at", { ascending: false }),
         supabase.rpc("reading_streak", { uid: profile.id }),
       ]);
 
     feed = (posts ?? []) as FeedPost[];
-    shelf = (
-      (read ?? []) as unknown as {
-        book_id: string;
-        books: {
-          title: string;
-          author: string | null;
-          cover_id: number | null;
-        } | null;
-      }[]
-    ).map((r) => ({
+    const rows = (read ?? []) as unknown as {
+      book_id: string;
+      status: string;
+      books: {
+        title: string;
+        author: string | null;
+        cover_id: number | null;
+      } | null;
+    }[];
+    const toBook = (r: (typeof rows)[number]): ReadBook => ({
       book_id: r.book_id,
       title: r.books?.title ?? "Untitled",
       author: r.books?.author ?? null,
       cover_id: r.books?.cover_id ?? null,
-    }));
+    });
+    shelf = rows.filter((r) => r.status !== "to-read").map(toBook);
+    toRead = rows.filter((r) => r.status === "to-read").map(toBook);
 
     const row = (
       streakRows as unknown as { current_days: number; best_days: number }[] | null
@@ -312,10 +317,12 @@ export default async function ProfilePage({
           <ProfileTabs
             counts={{
               shelf: shelf.length,
+              toread: toRead.length,
               reviews: reviews.length,
               quotes: quotes.length,
               notes: notes.length,
             }}
+            toRead={<Shelf books={toRead} isSelf={isSelf} status="to-read" />}
             shelf={
               <div className="space-y-8">
                 <Shelf books={shelf} isSelf={isSelf} />

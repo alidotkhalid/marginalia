@@ -9,6 +9,8 @@ type RoomRow = {
   name: string;
   genre: string;
   mode: string;
+  book_title: string | null;
+  book_cover_id: number | null;
   timer_ends_at: string | null;
 };
 
@@ -45,7 +47,7 @@ export default async function RoomsPage() {
     await Promise.all([
       supabase
         .from("rooms")
-        .select("id, name, genre, mode, timer_ends_at")
+        .select("id, name, genre, mode, book_title, book_cover_id, timer_ends_at")
         .order("created_at", { ascending: false })
         .limit(60),
       // Only who is sitting in a room right now: a handful of rows at most.
@@ -81,10 +83,15 @@ export default async function RoomsPage() {
     const active = activeByRoom.get(r.id) ?? [];
     const stat = statByRoom.get(r.id);
 
-    const covers = (stat?.books ?? []).map((b) => ({
-      id: b.cover ?? null,
-      title: b.title,
-    }));
+    // The room's own book (a buddy read) leads the stack.
+    const covers = [
+      ...(r.book_title
+        ? [{ id: r.book_cover_id ?? null, title: r.book_title }]
+        : []),
+      ...(stat?.books ?? [])
+        .filter((b) => b.title !== r.book_title)
+        .map((b) => ({ id: b.cover ?? null, title: b.title })),
+    ].slice(0, 4);
 
     const people = active.map((p) => ({
       name: p.profiles?.display_name ?? p.profiles?.username ?? "reader",

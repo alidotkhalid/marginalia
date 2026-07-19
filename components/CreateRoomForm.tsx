@@ -4,6 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/app/actions";
 import { ROOM_GENRES, ROOM_MODES, MIXED } from "@/lib/rooms";
+import type { BookResult } from "@/lib/openlibrary";
+import { BookSearch } from "./BookSearch";
+import { BookCover } from "./BookCover";
 import { Spinner } from "./Spinner";
 
 // Naming a room opens a short panel: which genre is read here, and how the room
@@ -13,6 +16,7 @@ export function CreateRoomForm() {
   const [name, setName] = useState("");
   const [genre, setGenre] = useState(MIXED);
   const [mode, setMode] = useState("quiet");
+  const [book, setBook] = useState<BookResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -21,7 +25,7 @@ export function CreateRoomForm() {
   function submit() {
     setError(null);
     startTransition(async () => {
-      const res = await createRoom(name, genre, mode);
+      const res = await createRoom(name, genre, mode, book);
       if (res.error) setError(res.error);
       else if (res.id) router.push(`/rooms/${res.id}`);
     });
@@ -66,6 +70,34 @@ export function CreateRoomForm() {
             <p className="mt-1 text-xs text-ink-faint">
               Pick Mixed genres if the room reads a bit of everything.
             </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-ink-faint">
+              Reading together? Attach the book (optional)
+            </label>
+            {book ? (
+              <div className="flex items-center gap-3 rounded-card border border-parchment-dark bg-parchment p-2">
+                <BookCover coverId={book.coverId} title={book.title} size="S" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-sm font-semibold text-ink">
+                    {book.title}
+                  </p>
+                  <p className="truncate text-xs text-ink-faint">
+                    {book.author ?? "Unknown author"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBook(null)}
+                  className="font-mono text-xs text-ink-faint hover:text-oxblood"
+                >
+                  remove
+                </button>
+              </div>
+            ) : (
+              <BookSearch onSelect={setBook} />
+            )}
           </div>
 
           <div>

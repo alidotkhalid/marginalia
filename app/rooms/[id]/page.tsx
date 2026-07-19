@@ -15,7 +15,7 @@ export default async function RoomPage({
 
   const { data: room } = await supabase
     .from("rooms")
-    .select("id, name, genre, mode, timer_ends_at, created_by")
+    .select("id, name, genre, mode, book_title, timer_ends_at, created_by")
     .eq("id", params.id)
     .maybeSingle();
   if (!room) notFound();
@@ -64,6 +64,7 @@ export default async function RoomPage({
       roomName={room.name as string}
       genre={(room.genre as string) ?? "mixed"}
       mode={(room.mode as string) ?? "quiet"}
+      bookTitle={(room.book_title as string | null) ?? null}
       timerEndsAt={(room.timer_ends_at as string | null) ?? null}
       participants={participants}
       meId={user.id}

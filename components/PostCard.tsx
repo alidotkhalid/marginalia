@@ -16,6 +16,7 @@ export type FeedPost = {
   author_username: string;
   author_display_name: string | null;
   author_avatar_icon: string | null;
+  book_olid: string | null;
   book_title: string | null;
   book_author: string | null;
   book_cover_id: number | null;
@@ -147,7 +148,10 @@ export function PostCard({
         ) : (
           <>
             {post.book_title && (
-              <div className="mb-4 flex items-center gap-3 rounded-card bg-parchment-light p-3">
+              <Link
+                href={post.book_olid ? `/book/${post.book_olid}` : "#"}
+                className="mb-4 flex items-center gap-3 rounded-card bg-parchment-light p-3 no-underline transition-colors hover:bg-parchment-dark/40"
+              >
                 <BookCover
                   coverId={post.book_cover_id}
                   title={post.book_title}
@@ -161,7 +165,7 @@ export function PostCard({
                     {post.book_author ?? "Unknown author"}
                   </p>
                 </div>
-              </div>
+              </Link>
             )}
             {kind === "review" && !!post.rating && (
               <div className="mb-2">
@@ -260,7 +264,18 @@ export function PostCard({
             {post.book_title && (
               <span className="text-ink-faint">
                 {PREPOSITION[kind]}{" "}
-                <span className="font-semibold text-ink">{post.book_title}</span>
+                {post.book_olid ? (
+                  <Link
+                    href={`/book/${post.book_olid}`}
+                    className="font-semibold text-ink no-underline hover:text-brass"
+                  >
+                    {post.book_title}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-ink">
+                    {post.book_title}
+                  </span>
+                )}
               </span>
             )}
             <span className="font-mono text-xs text-ink-faint">

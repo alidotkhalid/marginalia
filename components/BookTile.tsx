@@ -16,7 +16,7 @@ export function BookTile({
   canAct: boolean;
 }) {
   const router = useRouter();
-  const [done, setDone] = useState<null | "reading" | "shelf">(null);
+  const [done, setDone] = useState<null | "reading" | "shelf" | "tbr">(null);
   const [pending, startTransition] = useTransition();
 
   function startReading() {
@@ -31,6 +31,13 @@ export function BookTile({
     startTransition(async () => {
       await addReadBook(book);
       setDone("shelf");
+    });
+  }
+
+  function wantToRead() {
+    startTransition(async () => {
+      await addReadBook(book, "to-read");
+      setDone("tbr");
     });
   }
 
@@ -50,11 +57,18 @@ export function BookTile({
               {done === "reading" ? "Reading ✓" : "Start reading"}
             </button>
             <button
+              onClick={wantToRead}
+              disabled={pending}
+              className="btn-outline-cream !py-1 text-[11px]"
+            >
+              {done === "tbr" ? "On the pile ✓" : "Want to read"}
+            </button>
+            <button
               onClick={addToShelf}
               disabled={pending}
               className="btn-outline-cream !py-1 text-[11px]"
             >
-              {done === "shelf" ? "On shelf ✓" : "Add to shelf"}
+              {done === "shelf" ? "On shelf ✓" : "Read it already"}
             </button>
           </div>
         )}

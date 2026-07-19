@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { coverUrl, type BookResult } from "@/lib/openlibrary";
-import { addReadBook, removeReadBook } from "@/app/actions";
+import { addReadBook, removeReadBook, setReadBookStatus } from "@/app/actions";
 import { BookSearch } from "./BookSearch";
 
 export type ReadBook = {
@@ -31,15 +31,18 @@ function spineFor(key: string): string {
 }
 
 /**
- * The shelf: finished books as stacked spines. Books land here automatically at
- * 100% progress, and the owner can add or pull one by hand.
+ * A shelf of books. "finished" holds books read to the end (they land here
+ * automatically at 100% progress); "to-read" is the pile of intentions. The
+ * owner can add, pull, or move a book between the two.
  */
 export function Shelf({
   books,
   isSelf,
+  status = "finished",
 }: {
   books: ReadBook[];
   isSelf: boolean;
+  status?: "finished" | "to-read";
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
@@ -48,7 +51,14 @@ export function Shelf({
   function add(book: BookResult) {
     setAdding(false);
     startTransition(async () => {
-      await addReadBook(book);
+      await addReadBook(book, status);
+      router.refresh();
+    });
+  }
+
+  function finish(bookId: string) {
+    startTransition(async () => {
+      await setReadBookStatus(bookId, "finished");
       router.refresh();
     });
   }
@@ -104,6 +114,16 @@ export function Shelf({
             <p className="mt-1.5 truncate text-center text-[11px] text-ink-faint">
               {b.title}
             </p>
+            {isSelf && status === "to-read" && (
+              <button
+                type="button"
+                onClick={() => finish(b.book_id)}
+                disabled={pending}
+                className="mx-auto mt-1 block font-mono text-[10px] uppercase tracking-wider text-ink-faint hover:text-brass"
+              >
+                finished it
+              </button>
+            )}
             {isSelf && (
               <button
                 type="button"
@@ -132,7 +152,11 @@ export function Shelf({
       </ul>
 
       {books.length === 0 && !isSelf && (
-        <p className="text-sm text-ink-faint">No finished books yet.</p>
+        <p className="text-sm text-ink-faint">
+          {status === "to-read"
+            ? "Nothing on the to-read pile yet."
+            : "No finished books yet."}
+        </p>
       )}
     </div>
   );

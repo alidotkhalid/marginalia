@@ -64,6 +64,7 @@ export function RoomLive({
   roomName,
   genre,
   mode,
+  bookTitle = null,
   timerEndsAt,
   participants,
   meId,
@@ -73,6 +74,8 @@ export function RoomLive({
   roomName: string;
   genre: string;
   mode: string;
+  /** For buddy reads: the book this room is reading together. */
+  bookTitle?: string | null;
   timerEndsAt: string | null;
   participants: RoomParticipant[];
   meId: string;
@@ -223,6 +226,9 @@ export function RoomLive({
         </h1>
         <p className="font-mono text-xs text-brass/80">
           {roomModeLabel(mode)} · {roomGenreLabel(genre)}
+          {bookTitle && (
+            <span className="ml-2 text-ink-soft">reading {bookTitle}</span>
+          )}
         </p>
 
         <div className="ml-auto flex items-center gap-3">

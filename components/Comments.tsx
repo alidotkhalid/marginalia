@@ -22,6 +22,25 @@ function timeAgo(iso: string) {
   return `${Math.floor(hrs / 24)}d`;
 }
 
+// Turn "@username" into a profile link; mentioned readers get a notification.
+function linkifyMentions(body: string) {
+  const parts = body.split(/(@[a-zA-Z0-9_]{3,24})/g);
+  if (parts.length === 1) return body;
+  return parts.map((part, i) =>
+    part.startsWith("@") ? (
+      <Link
+        key={i}
+        href={`/profile/${part.slice(1).toLowerCase()}`}
+        className="text-brass no-underline hover:text-brass-light"
+      >
+        {part}
+      </Link>
+    ) : (
+      part
+    )
+  );
+}
+
 export function Comments({
   postId,
   count,
@@ -128,7 +147,9 @@ export function Comments({
             {timeAgo(c.created_at)}
           </span>
         </p>
-        <p className="whitespace-pre-wrap text-sm text-ink-soft">{c.body}</p>
+        <p className="whitespace-pre-wrap text-sm text-ink-soft">
+          {linkifyMentions(c.body)}
+        </p>
 
         <div className="mt-1 flex items-center gap-3 text-sm">
           {/* Up / down vote */}

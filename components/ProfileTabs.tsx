@@ -2,27 +2,36 @@
 
 import { useState, type ReactNode } from "react";
 
-type TabKey = "shelf" | "reviews" | "quotes" | "notes";
+type TabKey = "shelf" | "toread" | "reviews" | "quotes" | "notes";
 
-// The profile's top bar: the shelf, then one tab per kind of read. Panels are
+// The profile's top bar: the shelves, then one tab per kind of read. Panels are
 // rendered on the server and passed in, so switching tabs costs no round trip.
 export function ProfileTabs({
   shelf,
+  toRead,
   reviews,
   quotes,
   notes,
   counts,
 }: {
   shelf: ReactNode;
+  toRead: ReactNode;
   reviews: ReactNode;
   quotes: ReactNode;
   notes: ReactNode;
-  counts: { shelf: number; reviews: number; quotes: number; notes: number };
+  counts: {
+    shelf: number;
+    toread: number;
+    reviews: number;
+    quotes: number;
+    notes: number;
+  };
 }) {
   const [tab, setTab] = useState<TabKey>("shelf");
 
   const tabs: { key: TabKey; label: string; panel: ReactNode }[] = [
     { key: "shelf", label: "Shelf", panel: shelf },
+    { key: "toread", label: "To Read", panel: toRead },
     { key: "reviews", label: "Reviews", panel: reviews },
     { key: "quotes", label: "Quotes", panel: quotes },
     { key: "notes", label: "Notes", panel: notes },

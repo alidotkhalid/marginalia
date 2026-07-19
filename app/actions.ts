@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   booksBySubject,
   booksByAuthor,
+  searchBooks,
   type BookResult,
 } from "@/lib/openlibrary";
 import { postLimit, type PostKind } from "@/lib/constants";
@@ -377,12 +378,16 @@ export async function setReadingProgress(progress: number) {
       .maybeSingle();
     const currentId = prof?.currently_reading as string | null | undefined;
     if (currentId) {
-      await supabase
-        .from("read_books")
-        .upsert(
-          { user_id: user.id, book_id: currentId },
-          { onConflict: "user_id,book_id", ignoreDuplicates: true }
-        );
+      // Finishing wins: even a book that sat on the to-read shelf flips over.
+      await supabase.from("read_books").upsert(
+        {
+          user_id: user.id,
+          book_id: currentId,
+          status: "finished",
+          finished_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,book_id" }
+      );
     }
     await supabase
       .from("profiles")
@@ -491,8 +496,11 @@ export async function completeOnboarding(input: {
   return { error: null };
 }
 
-/** Add a book to the current user's "Books Read" shelf. */
-export async function addReadBook(book: BookResult) {
+/** Add a book to one of the current user's shelves: finished, or to-read. */
+export async function addReadBook(
+  book: BookResult,
+  status: "finished" | "to-read" = "finished"
+) {
   const supabase = createClient();
   const {
     data: { user },
@@ -500,12 +508,137 @@ export async function addReadBook(book: BookResult) {
   if (!user) redirect("/login");
 
   const bookId = await upsertBook(supabase, book);
+  await supabase.from("read_books").upsert(
+    {
+      user_id: user.id,
+      book_id: bookId,
+      status,
+      finished_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,book_id" }
+  );
+  revalidatePath("/", "layout");
+}
+
+export type GoodreadsRow = {
+  title: string;
+  author: string | null;
+  isbn13: string | null;
+  shelf: "read" | "to-read" | "currently-reading";
+};
+
+/**
+ * Import a small batch of rows from the reader's own Goodreads export. Each
+ * book is matched against Open Library (ISBN first, then title + author) for
+ * cover art; unmatched books are still shelved, just with a typographic spine.
+ * The client sends chunks so no single call runs long.
+ */
+export async function importGoodreadsRows(rows: GoodreadsRow[]) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  let imported = 0;
+  let matched = 0;
+
+  for (const row of rows.slice(0, 12)) {
+    const title = (row.title ?? "").trim().slice(0, 300);
+    if (!title) continue;
+    const isbn = (row.isbn13 ?? "").replace(/[^0-9Xx]/g, "");
+
+    // Match on Open Library for the cover.
+    let result: BookResult | null = null;
+    try {
+      const q = isbn ? `isbn:${isbn}` : `${title} ${row.author ?? ""}`.trim();
+      const hit = (await searchBooks(q, 1))[0];
+      if (hit) {
+        const a = hit.title.toLowerCase();
+        const b = title.toLowerCase();
+        if (isbn || a.includes(b.slice(0, 24)) || b.includes(a)) {
+          result = hit;
+          matched++;
+        }
+      }
+    } catch {
+      /* Open Library hiccup: fall through to the spine fallback */
+    }
+
+    if (!result) {
+      // Deterministic pseudo-id so re-imports never duplicate the book.
+      const slug = (isbn || `${title}-${row.author ?? ""}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48);
+      result = {
+        olid: `gr:${slug}`,
+        title,
+        author: row.author?.trim() || null,
+        coverId: null,
+        firstYear: null,
+      };
+    }
+
+    try {
+      const bookId = await upsertBook(supabase, result);
+
+      if (row.shelf === "currently-reading") {
+        // Only fill the slot if it is empty; never evict a live book.
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("currently_reading")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!prof?.currently_reading) {
+          await supabase
+            .from("profiles")
+            .update({ currently_reading: bookId })
+            .eq("id", user.id);
+        } else {
+          await supabase.from("read_books").upsert(
+            { user_id: user.id, book_id: bookId, status: "to-read" },
+            { onConflict: "user_id,book_id", ignoreDuplicates: true }
+          );
+        }
+      } else {
+        // ignoreDuplicates: an import never overwrites an existing shelf row.
+        await supabase.from("read_books").upsert(
+          {
+            user_id: user.id,
+            book_id: bookId,
+            status: row.shelf === "read" ? "finished" : "to-read",
+          },
+          { onConflict: "user_id,book_id", ignoreDuplicates: true }
+        );
+      }
+      imported++;
+    } catch {
+      /* skip the row; the summary reports what made it */
+    }
+  }
+
+  revalidatePath("/", "layout");
+  return { imported, matched };
+}
+
+/** Move a shelved book between finished and to-read. */
+export async function setReadBookStatus(
+  bookId: string,
+  status: "finished" | "to-read"
+) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   await supabase
     .from("read_books")
-    .upsert(
-      { user_id: user.id, book_id: bookId },
-      { onConflict: "user_id,book_id", ignoreDuplicates: true }
-    );
+    .update({ status, finished_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .eq("book_id", bookId);
   revalidatePath("/", "layout");
 }
 
@@ -710,7 +843,8 @@ export async function fetchMoreBooks(params: {
 export async function createRoom(
   name: string,
   genre: string = MIXED,
-  mode: string = "quiet"
+  mode: string = "quiet",
+  book: BookResult | null = null
 ) {
   const supabase = createClient();
   const {
@@ -728,6 +862,10 @@ export async function createRoom(
       created_by: user.id,
       genre: isRoomGenre(genre) ? genre : MIXED,
       mode: isRoomMode(mode) ? mode : "quiet",
+      // A buddy read: the book this room is reading together.
+      book_olid: book?.olid ?? null,
+      book_title: book?.title?.slice(0, 300) ?? null,
+      book_cover_id: book?.coverId ?? null,
     })
     .select("id")
     .single();

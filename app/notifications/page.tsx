@@ -40,6 +40,13 @@ type Item =
       readKind: string;
       bookTitle: string | null;
       authorUsername: string;
+    }
+  | {
+      kind: "mention";
+      at: string;
+      person: Person;
+      body: string;
+      readAuthor: string;
     };
 
 function timeAgo(iso: string) {
@@ -188,6 +195,34 @@ export default async function NotificationsPage() {
     });
   }
 
+  // Comments that name me with @username, anywhere on the site.
+  const { data: mentionRows } = await supabase
+    .from("mentions")
+    .select(
+      "created_at, comments!comment_id ( body, author:profiles!author_id (username, display_name, avatar_icon), post:posts!post_id ( author:profiles!author_id (username) ) )"
+    )
+    .eq("mentioned_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  for (const m of (mentionRows ?? []) as unknown as {
+    created_at: string;
+    comments: {
+      body: string;
+      author: Person;
+      post: { author: { username: string } | null } | null;
+    } | null;
+  }[]) {
+    if (!m.comments) continue;
+    items.push({
+      kind: "mention",
+      at: m.created_at,
+      person: m.comments.author,
+      body: m.comments.body,
+      readAuthor: m.comments.post?.author?.username ?? "",
+    });
+  }
+
   for (const c of commentRows) {
     const meta = postMeta.get(c.post_id);
     items.push({
@@ -264,7 +299,7 @@ export default async function NotificationsPage() {
                   ? `f-${it.personId}`
                   : it.kind === "invite"
                   ? `i-${it.roomId}-${it.at}`
-                  : `c-${it.at}-${it.person?.username ?? ""}`
+                  : `${it.kind[0]}-${it.at}-${it.person?.username ?? ""}`
               }
               className="flex flex-wrap items-center gap-4 py-4"
             >
@@ -297,7 +332,7 @@ export default async function NotificationsPage() {
                       </Link>
                       .
                     </>
-                  ) : (
+                  ) : it.kind === "comment" ? (
                     <>
                       commented on your {it.readKind}
                       {it.bookTitle && (
@@ -311,10 +346,12 @@ export default async function NotificationsPage() {
                       )}
                       .
                     </>
+                  ) : (
+                    "mentioned you in a comment."
                   )}
                 </p>
 
-                {it.kind === "comment" && (
+                {(it.kind === "comment" || it.kind === "mention") && (
                   <p className="mt-1 line-clamp-2 border-l-2 border-brass/30 pl-3 text-sm italic text-ink-soft">
                     {it.body}
                   </p>
@@ -339,7 +376,9 @@ export default async function NotificationsPage() {
                 <RoomInviteRow roomId={it.roomId} />
               ) : (
                 <Link
-                  href={`/profile/${it.authorUsername}`}
+                  href={`/profile/${
+                    it.kind === "comment" ? it.authorUsername : it.readAuthor
+                  }`}
                   className="btn-ghost !py-1.5 text-sm no-underline"
                 >
                   View read

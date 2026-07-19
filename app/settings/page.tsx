@@ -73,6 +73,12 @@ export default async function SettingsPage() {
           <Link href="/drafts" className="link">
             Saved drafts →
           </Link>
+          <Link href="/import" className="link">
+            Import your Goodreads library →
+          </Link>
+          <Link href="/stats" className="link">
+            Your reading stats →
+          </Link>
         </div>
       </section>
 
