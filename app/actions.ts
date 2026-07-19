@@ -329,8 +329,12 @@ export async function deleteComment(commentId: string) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await supabase.from("comments").delete().eq("id", commentId);
+  // RLS allows this for the comment's author and for the author of the read it
+  // sits on. Replies are ordinary comments, so they follow the same rule.
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+  if (error) return { error: "That comment could not be removed." };
   revalidatePath("/", "layout");
+  return { error: null };
 }
 
 /** Set the current user's "Currently Reading" book. */

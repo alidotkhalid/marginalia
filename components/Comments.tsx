@@ -26,11 +26,14 @@ export function Comments({
   postId,
   count,
   currentUserId,
+  isPostOwner = false,
   actions,
 }: {
   postId: string;
   count: number;
   currentUserId?: string;
+  /** The signed-in reader wrote this read, so they can moderate its comments. */
+  isPostOwner?: boolean;
   actions?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -195,13 +198,15 @@ export function Comments({
         )}
       </div>
 
-      {currentUserId === c.author_id && (
+      {/* You can remove your own comments and replies; the author of the read
+          can also clear anything left on it. */}
+      {!!currentUserId && (currentUserId === c.author_id || isPostOwner) && (
         <button
           type="button"
           onClick={() => remove(c.id)}
           disabled={pending}
-          aria-label="Delete comment"
-          title="Delete comment"
+          aria-label={isReply ? "Delete reply" : "Delete comment"}
+          title={isReply ? "Delete reply" : "Delete comment"}
           className="mt-0.5 shrink-0 self-start text-ink-faint hover:text-oxblood"
         >
           <svg

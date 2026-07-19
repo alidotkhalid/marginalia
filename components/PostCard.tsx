@@ -302,6 +302,7 @@ export function PostCard({
         postId={post.id}
         count={post.comment_count ?? 0}
         currentUserId={currentUserId}
+        isPostOwner={isOwn}
         actions={
           <SaveButton
             postId={post.id}
