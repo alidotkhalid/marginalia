@@ -136,21 +136,13 @@ export function Shelf({
         )}
 
         <div className="relative min-w-0 flex-1">
-          {/* Fades hint that the shelf continues past the edge */}
-          {hasOverflow && !atStart && (
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#161c17] to-transparent" />
-          )}
-          {hasOverflow && !atEnd && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#161c17] to-transparent" />
-          )}
-
-          {/* Arrows stay visible whenever there is somewhere to go */}
+          {/* Glass panes at the edges, shown only where there is more shelf */}
           {hasOverflow && !atStart && (
             <button
               type="button"
               onClick={() => page(-1)}
               aria-label="Scroll shelf left"
-              className="shelf-arrow left-1"
+              className="shelf-arrow left-0"
             >
               ‹
             </button>
@@ -160,7 +152,7 @@ export function Shelf({
               type="button"
               onClick={() => page(1)}
               aria-label="Scroll shelf right"
-              className="shelf-arrow right-1"
+              className="shelf-arrow right-0"
             >
               ›
             </button>

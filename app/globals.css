@@ -181,25 +181,31 @@
     background-color: rgba(201, 169, 97, 0.45);
   }
 
-  /* A translucent arrow sitting over the shelf edge. Always visible when there
-     is somewhere to scroll, so the control is never a hidden hover secret. */
+  /* A full-height pane of frosted glass at the shelf edge. Always visible when
+     there is somewhere to scroll, and translucent enough that the covers stay
+     readable underneath it. */
   .shelf-arrow {
-    @apply absolute top-[4.25rem] z-20 flex h-10 w-10 items-center justify-center
-           rounded-pill text-xl leading-none transition-all;
-    background-color: rgba(15, 19, 16, 0.72);
-    border: 1px solid rgba(201, 169, 97, 0.3);
+    @apply absolute top-0 z-20 flex h-44 w-11 items-center justify-center
+           text-2xl leading-none transition-all;
+    background-color: rgba(20, 26, 21, 0.38);
+    backdrop-filter: blur(10px) saturate(115%);
+    -webkit-backdrop-filter: blur(10px) saturate(115%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
     color: theme("colors.brass.DEFAULT");
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
   }
   .shelf-arrow:hover {
-    background-color: rgba(43, 37, 23, 0.95);
-    border-color: rgba(201, 169, 97, 0.6);
+    background-color: rgba(20, 26, 21, 0.62);
+    border-color: rgba(201, 169, 97, 0.45);
     color: theme("colors.brass.light");
-    transform: scale(1.08);
   }
   .shelf-arrow:active {
-    transform: scale(0.96);
+    background-color: rgba(20, 26, 21, 0.75);
+  }
+  .shelf-arrow:focus-visible {
+    outline: none;
+    border-color: rgba(201, 169, 97, 0.7);
   }
 
   /* Unread marker on the Notifications tab: a small gold dot that breathes */
