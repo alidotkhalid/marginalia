@@ -30,6 +30,12 @@ function spineFor(key: string): string {
   return SPINES[h % SPINES.length];
 }
 
+// Four books on screen at a time, whatever the shelf holds. Each book takes a
+// quarter of the track once the three gaps between them are accounted for.
+const PER_PAGE = 4;
+const GAP = 16; // px, matches gap-4
+const BOOK_WIDTH = `calc((100% - ${(PER_PAGE - 1) * GAP}px) / ${PER_PAGE})`;
+
 /**
  * A shelf of books. "finished" holds books read to the end (they land here
  * automatically at 100% progress); "to-read" is the pile of intentions. The
@@ -75,11 +81,12 @@ export function Shelf({
     return () => ro.disconnect();
   }, [measure, books.length]);
 
-  // Scroll by most of a screenful, so a click always lands on a fresh set.
+  // One click moves the shelf by exactly one set of four, so books never end up
+  // half-shown at the edge.
   function page(direction: 1 | -1) {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: "smooth" });
+    el.scrollBy({ left: direction * (el.clientWidth + GAP), behavior: "smooth" });
   }
 
   function add(book: BookResult) {
@@ -121,14 +128,14 @@ export function Shelf({
         </div>
       )}
 
-      <div className="flex items-start gap-4">
+      <div className="flex w-full min-w-0 max-w-full items-start gap-4 overflow-hidden">
         {/* Pinned outside the scroller, so adding a book is always one click
             away however long the shelf grows. */}
         {isSelf && !adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex h-44 w-[7.5rem] shrink-0 flex-col items-center justify-center gap-1 rounded-card border border-dashed border-parchment-dark text-sm text-ink-faint transition-colors hover:border-brass hover:text-brass sm:w-32"
+            className="flex h-44 w-[7rem] shrink-0 flex-col items-center justify-center gap-1 rounded-card border border-dashed border-parchment-dark text-sm text-ink-faint transition-colors hover:border-brass hover:text-brass"
           >
             <span className="text-xl leading-none">+</span>
             Add book
@@ -167,7 +174,8 @@ export function Shelf({
           {books.map((b) => (
             <li
               key={b.book_id}
-              className="group relative w-[7.5rem] shrink-0 snap-start sm:w-32"
+              style={{ width: BOOK_WIDTH }}
+              className="group relative shrink-0 snap-start"
             >
               <div
                 className="h-44 overflow-hidden rounded-card shadow-card ring-1 ring-black/30"

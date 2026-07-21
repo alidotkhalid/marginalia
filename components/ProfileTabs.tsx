@@ -38,7 +38,9 @@ export function ProfileTabs({
   ];
 
   return (
-    <div className="space-y-5">
+    /* min-w-0 stops a wide child (the shelf) from stretching the grid column
+       and giving the whole page a horizontal scrollbar. */
+    <div className="min-w-0 space-y-5">
       <div role="tablist" className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button
@@ -58,7 +60,7 @@ export function ProfileTabs({
       </div>
 
       {tabs.map((t) => (
-        <div key={t.key} role="tabpanel" hidden={tab !== t.key}>
+        <div key={t.key} role="tabpanel" hidden={tab !== t.key} className="min-w-0">
           {tab === t.key && t.panel}
         </div>
       ))}
