@@ -210,6 +210,8 @@ export default async function ProfilePage({
   return (
     <div className="profile-theme">
       {!canView ? (
+        /* Private, and the viewer is not approved: the counts still show, but
+           the follower and following lists are withheld. */
         <div className="space-y-6">
           <ProfileCard
             profile={profile}
@@ -218,8 +220,8 @@ export default async function ProfilePage({
             isPrivate={isPrivate}
             followers={followers}
             following={following}
-            followerList={followerList}
-            followingList={followingList}
+            followerList={[]}
+            followingList={[]}
             booksRead={0}
           />
           <div className="card p-8 text-center">
