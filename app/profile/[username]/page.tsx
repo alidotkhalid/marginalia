@@ -120,8 +120,20 @@ export default async function ProfilePage({
 
   const followerList = toPeople(followerRows);
   const followingList = toPeople(followingRows);
-  const followers = followerList.length;
-  const following = followingList.length;
+
+  // The follow-graph and shelf policies hide rows on private profiles, so the
+  // totals come from a definer function that returns numbers only.
+  const { data: countRows } = await supabase.rpc("profile_counts", {
+    uid: profile.id,
+  });
+  const counts = (
+    countRows as unknown as
+      | { followers: number; following: number; books: number }[]
+      | null
+  )?.[0];
+  const followers = counts?.followers ?? followerList.length;
+  const following = counts?.following ?? followingList.length;
+  const booksCount = counts?.books ?? 0;
 
   // Content is only fetched/shown when the viewer is allowed to see it.
   let feed: FeedPost[] = [];
@@ -222,7 +234,7 @@ export default async function ProfilePage({
             following={following}
             followerList={[]}
             followingList={[]}
-            booksRead={0}
+            booksRead={booksCount}
           />
           <div className="card p-8 text-center">
             <p className="font-display text-xl text-ink">
