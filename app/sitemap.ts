@@ -2,8 +2,7 @@ import type { MetadataRoute } from "next";
 
 // The public, indexable pages. Signed-in surfaces are deliberately absent.
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://marginalia-ivory.vercel.app";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://marginaly.club";
 
   return [
     { url: `${base}/`, changeFrequency: "daily", priority: 1 },

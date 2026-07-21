@@ -13,7 +13,7 @@ const DESCRIPTION =
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://marginalia-ivory.vercel.app"
+    process.env.NEXT_PUBLIC_SITE_URL || "https://marginaly.club"
   ),
   title: { default: "Marginaly", template: "%s · Marginaly" },
   description: DESCRIPTION,
