@@ -121,36 +121,50 @@ export function Shelf({
         </div>
       )}
 
-      <div className="group/shelf relative">
-        {/* Fades hint that the shelf continues past the edge */}
-        {hasOverflow && !atStart && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#161c17] to-transparent" />
-        )}
-        {hasOverflow && !atEnd && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#161c17] to-transparent" />
+      <div className="flex items-start gap-4">
+        {/* Pinned outside the scroller, so adding a book is always one click
+            away however long the shelf grows. */}
+        {isSelf && !adding && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="flex h-44 w-[7.5rem] shrink-0 flex-col items-center justify-center gap-1 rounded-card border border-dashed border-parchment-dark text-sm text-ink-faint transition-colors hover:border-brass hover:text-brass sm:w-32"
+          >
+            <span className="text-xl leading-none">+</span>
+            Add book
+          </button>
         )}
 
-        {/* Arrows: only when the shelf runs past its edges */}
-        {hasOverflow && !atStart && (
-          <button
-            type="button"
-            onClick={() => page(-1)}
-            aria-label="Scroll shelf left"
-            className="shelf-arrow left-1"
-          >
-            ‹
-          </button>
-        )}
-        {hasOverflow && !atEnd && (
-          <button
-            type="button"
-            onClick={() => page(1)}
-            aria-label="Scroll shelf right"
-            className="shelf-arrow right-1"
-          >
-            ›
-          </button>
-        )}
+        <div className="relative min-w-0 flex-1">
+          {/* Fades hint that the shelf continues past the edge */}
+          {hasOverflow && !atStart && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#161c17] to-transparent" />
+          )}
+          {hasOverflow && !atEnd && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#161c17] to-transparent" />
+          )}
+
+          {/* Arrows stay visible whenever there is somewhere to go */}
+          {hasOverflow && !atStart && (
+            <button
+              type="button"
+              onClick={() => page(-1)}
+              aria-label="Scroll shelf left"
+              className="shelf-arrow left-1"
+            >
+              ‹
+            </button>
+          )}
+          {hasOverflow && !atEnd && (
+            <button
+              type="button"
+              onClick={() => page(1)}
+              aria-label="Scroll shelf right"
+              className="shelf-arrow right-1"
+            >
+              ›
+            </button>
+          )}
 
         <ul
           ref={trackRef}
@@ -213,18 +227,8 @@ export function Shelf({
             </li>
           ))}
 
-          {isSelf && !adding && (
-            <li className="w-[7.5rem] shrink-0 snap-start sm:w-32">
-              <button
-                type="button"
-                onClick={() => setAdding(true)}
-                className="flex h-44 w-full items-center justify-center rounded-card border border-dashed border-parchment-dark text-sm text-ink-faint transition-colors hover:border-brass hover:text-brass"
-              >
-                + Add book
-              </button>
-            </li>
-          )}
-        </ul>
+          </ul>
+        </div>
       </div>
 
       {books.length === 0 && !isSelf && (

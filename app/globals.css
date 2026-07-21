@@ -181,30 +181,25 @@
     background-color: rgba(201, 169, 97, 0.45);
   }
 
-  /* Arrows sit over the fade, and step aside until the shelf is hovered. */
+  /* A translucent arrow sitting over the shelf edge. Always visible when there
+     is somewhere to scroll, so the control is never a hidden hover secret. */
   .shelf-arrow {
-    @apply absolute top-[4.25rem] z-20 flex h-9 w-9 items-center justify-center
-           rounded-pill text-lg leading-none opacity-0 transition-all;
-    background-color: rgba(15, 19, 16, 0.92);
-    border: 1px solid rgba(201, 169, 97, 0.28);
+    @apply absolute top-[4.25rem] z-20 flex h-10 w-10 items-center justify-center
+           rounded-pill text-xl leading-none transition-all;
+    background-color: rgba(15, 19, 16, 0.72);
+    border: 1px solid rgba(201, 169, 97, 0.3);
     color: theme("colors.brass.DEFAULT");
-    backdrop-filter: blur(6px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-  }
-  .group\/shelf:hover .shelf-arrow,
-  .shelf-arrow:focus-visible {
-    opacity: 1;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   }
   .shelf-arrow:hover {
-    background-color: #2b2517;
+    background-color: rgba(43, 37, 23, 0.95);
+    border-color: rgba(201, 169, 97, 0.6);
     color: theme("colors.brass.light");
-    transform: scale(1.06);
+    transform: scale(1.08);
   }
-  /* Touch devices have no hover, so the arrows stay visible there. */
-  @media (hover: none) {
-    .shelf-arrow {
-      opacity: 1;
-    }
+  .shelf-arrow:active {
+    transform: scale(0.96);
   }
 
   /* Unread marker on the Notifications tab: a small gold dot that breathes */
