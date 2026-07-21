@@ -44,7 +44,7 @@ export default function SignupPage({
         Join Marginaly
       </h1>
       <p className="mb-6 text-sm text-cream-soft">
-        A quiet corner for readers. No feed algorithms, ever.
+        A quiet corner for readers, and a shelf of your own.
       </p>
 
       <form action={signup} className="card space-y-3 p-5">

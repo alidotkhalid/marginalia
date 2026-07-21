@@ -6,33 +6,33 @@ import Link from "next/link";
 const FEATURES: { title: string; body: string; icon: string }[] = [
   {
     icon: "✎",
-    title: "Notes, quotes, reviews",
-    body: "Every read is one thing: a thought while reading, a passage worth keeping, or an honest review with a star rating. Always tied to a real book.",
+    title: "Three ways to write",
+    body: "Jot a note when a page makes you think. Keep a passage you want to come back to. Or leave an honest review with a rating. Each one stays with the book it came from.",
   },
   {
     icon: "▤",
     title: "A shelf that fills itself",
-    body: "Finish a book and it lands on your shelf, cover and all. Your profile becomes a record of your reading life, not a highlight reel.",
+    body: "Mark a book finished and it takes its place on your shelf, cover and all. Over time your profile becomes an honest record of what you have actually read.",
   },
   {
     icon: "Ⅻ",
-    title: "Streaks in roman numerals",
-    body: "Post a read, log your progress, or sit in a room and the day counts. Watch your streak grow from I to XII and beyond.",
+    title: "Streaks worth keeping",
+    body: "Read a few pages, share a thought, or sit down with others and the day counts. Your streak builds in roman numerals, with your best run always there to beat.",
   },
   {
     icon: "◉",
     title: "Reading rooms",
-    body: "Sit and read alongside others in real time. A shared timer, page ticking, a soft chime when the session ends. No camera, no chat, just company.",
+    body: "Open a room and read alongside other people in real time. A shared timer counts down, everyone's page ticks up, and a soft chime marks the end. Company while you read.",
   },
   {
     icon: "#",
-    title: "Genres, not algorithms",
-    body: "Follow the tags you care about and browse shelves of readers and reads by genre. The feed is chronological, from people you chose. Nothing is ranked at you.",
+    title: "Follow what you love",
+    body: "Star the genres you care about and browse shelves of readers and reads by tag. Your feed holds what the people you follow wrote, in the order they wrote it.",
   },
   {
     icon: "🔒",
     title: "Reading is personal",
-    body: "Go private and approve every follower, Instagram-style. Block anyone, ask readers questions they answer on their own terms, and leave whenever. Your data is yours.",
+    body: "Make your account private and approve each follower yourself. Ask other readers questions they can answer in their own time. Your shelf, your notes, your call.",
   },
 ];
 
@@ -42,7 +42,7 @@ export function LandingPage() {
       {/* ---- Hero ---- */}
       <section className="mx-auto max-w-2xl pt-10 text-center sm:pt-16">
         <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.25em] text-brass">
-          A social network for book lovers
+          For people who read
         </p>
         <h1 className="font-display text-5xl font-bold leading-tight text-cream sm:text-6xl">
           Read deliberately.
@@ -50,9 +50,9 @@ export function LandingPage() {
           Share it quietly.
         </h1>
         <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-ink-soft">
-          Marginaly is a distraction-free, text-first corner of the internet for
-          people who read. No video, no infinite scroll, no algorithm deciding
-          what you see. Just books, and the people reading them.
+          Marginaly is a small, text-first place to keep what your reading gives
+          you. Save the passages worth remembering, write down what a book made
+          you think, and follow readers whose taste you trust.
         </p>
 
         <div className="mt-8 flex items-center justify-center gap-3">
@@ -64,7 +64,7 @@ export function LandingPage() {
           </Link>
         </div>
         <p className="mt-3 font-mono text-xs text-ink-faint">
-          Free. No ads. No tracking pixels reading over your shoulder.
+          Free to join, and quiet by design.
         </p>
       </section>
 
@@ -107,7 +107,7 @@ export function LandingPage() {
           What you get
         </h2>
         <p className="mb-8 text-center text-sm text-ink-soft">
-          Everything here exists to serve the reading, not the metrics.
+          Everything here is built to serve the reading itself.
         </p>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -134,9 +134,9 @@ export function LandingPage() {
         </h2>
         <ol className="space-y-4">
           {[
-            ["I", "Make an account", "A username, an email, and a pixel-art avatar with a name like Night Owl or Margin Scribbler."],
-            ["II", "Say what you are reading", "Search any book, set how far in you are, and your profile is alive."],
-            ["III", "Share a read", "A note, a quote, or a review. Five hundred characters of note, or two thousand of review. That is the whole game."],
+            ["I", "Pick a handle and a face", "Choose your name and an avatar. They come with names like Night Owl and Margin Scribbler, and one of them will feel like you."],
+            ["II", "Say what you are reading", "Search for the book on your nightstand and set how far along you are. Your profile comes alive straight away."],
+            ["III", "Share your first read", "Write a note, keep a quote, or post a review. Short by design, so it takes a minute rather than an evening."],
           ].map(([numeral, title, body]) => (
             <li key={numeral as string} className="card flex items-start gap-4 p-5">
               <span className="font-display text-2xl font-semibold text-brass">
@@ -160,7 +160,8 @@ export function LandingPage() {
             The margins are waiting.
           </h2>
           <p className="mx-auto mt-3 max-w-sm text-sm text-ink-soft">
-            Bring the book you are reading right now. That is all you need.
+            Bring whatever you are reading right now. That is all you need to
+            begin.
           </p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <Link href="/signup" className="btn-accent !px-8 !py-3 text-base no-underline">

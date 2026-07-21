@@ -9,7 +9,7 @@ import { TimezoneSync } from "@/components/TimezoneSync";
 import { signOut } from "./actions";
 
 const DESCRIPTION =
-  "A distraction-free, text-first social network for book lovers. No algorithms, no video, no infinite scroll.";
+  "A quiet, text-first social network for book lovers. Keep the passages worth remembering, write about what you read, and read alongside others.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(

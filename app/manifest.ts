@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Marginaly",
     short_name: "Marginaly",
     description:
-      "A distraction-free, text-first social network for book lovers.",
+      "A quiet, text-first social network for book lovers.",
     start_url: "/",
     display: "standalone",
     background_color: "#0F1310",
