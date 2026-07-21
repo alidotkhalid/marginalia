@@ -24,11 +24,41 @@ async function upsertBook(
   supabase: ReturnType<typeof createClient>,
   book: BookResult
 ): Promise<string> {
+  // `books` is a shared table that every reader can write to, and its rows are
+  // visible site-wide on book pages. The payload arrives from the client, so
+  // nothing here is trusted: ids and lengths are bounded before insert.
+  const olid = String(book?.olid ?? "")
+    .trim()
+    .slice(0, 64);
+  if (!/^[A-Za-z0-9:_-]{1,64}$/.test(olid)) {
+    throw new Error("That book could not be attached.");
+  }
+
+  const title = String(book?.title ?? "").trim().slice(0, 300);
+  if (!title) throw new Error("That book could not be attached.");
+
+  const authorRaw = String(book?.author ?? "").trim().slice(0, 200);
+  const author = authorRaw.length ? authorRaw : null;
+
+  const coverId =
+    Number.isInteger(book?.coverId) &&
+    (book.coverId as number) > 0 &&
+    (book.coverId as number) < 1e12
+      ? (book.coverId as number)
+      : null;
+
+  const year =
+    Number.isInteger(book?.firstYear) &&
+    (book.firstYear as number) > 0 &&
+    (book.firstYear as number) <= new Date().getFullYear() + 1
+      ? (book.firstYear as number)
+      : null;
+
   // Try to find an existing cached row first.
   const { data: existing } = await supabase
     .from("books")
     .select("id")
-    .eq("olid", book.olid)
+    .eq("olid", olid)
     .maybeSingle();
 
   if (existing) return existing.id;
@@ -36,16 +66,25 @@ async function upsertBook(
   const { data, error } = await supabase
     .from("books")
     .insert({
-      olid: book.olid,
-      title: book.title,
-      author: book.author,
-      cover_id: book.coverId,
-      first_year: book.firstYear,
+      olid,
+      title,
+      author,
+      cover_id: coverId,
+      first_year: year,
     })
     .select("id")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    // A concurrent insert may have won the race; take theirs.
+    const { data: raced } = await supabase
+      .from("books")
+      .select("id")
+      .eq("olid", olid)
+      .maybeSingle();
+    if (raced) return raced.id;
+    throw new Error(error.message);
+  }
   return data.id;
 }
 
