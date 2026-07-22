@@ -6,6 +6,7 @@ import { PostContent } from "./PostContent";
 import { StarRating } from "./StarRating";
 import { FollowButton } from "./FollowButton";
 import { SaveButton } from "./SaveButton";
+import { ReportButton } from "./ReportButton";
 import type { PostKind } from "@/lib/constants";
 import type { FollowStatus } from "@/app/actions";
 
@@ -199,12 +200,17 @@ export function PostCard({
           count={post.comment_count ?? 0}
           currentUserId={currentUserId}
           actions={
-            <SaveButton
-              postId={post.id}
-              initialSaved={!!post.saved_by_me}
-              initialCount={post.save_count ?? 0}
-              canSave={!!currentUserId}
-            />
+            <div className="flex items-center gap-4">
+              <SaveButton
+                postId={post.id}
+                initialSaved={!!post.saved_by_me}
+                initialCount={post.save_count ?? 0}
+                canSave={!!currentUserId}
+              />
+              {!isOwn && currentUserId && (
+                <ReportButton kind="read" id={post.id} />
+              )}
+            </div>
           }
         />
       </article>

@@ -11,6 +11,7 @@ import {
 } from "@/app/actions";
 import type { CommentRow } from "@/lib/comments";
 import { Avatar } from "./Avatar";
+import { ReportButton } from "./ReportButton";
 import { Spinner } from "./Spinner";
 
 function timeAgo(iso: string) {
@@ -220,6 +221,11 @@ export function Comments({
             >
               reply
             </button>
+          )}
+
+          {/* Report, for comments that are not your own */}
+          {currentUserId && currentUserId !== c.author_id && (
+            <ReportButton kind="comment" id={c.id} compact />
           )}
         </div>
 

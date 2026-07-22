@@ -1256,6 +1256,41 @@ export async function dismissAsk(askId: string) {
 }
 
 /**
+ * Flag a read or a comment as objectionable. Reports are private to the
+ * reporter and reviewed by the operator in the Supabase dashboard. Required by
+ * the App Store for user-generated content.
+ */
+export async function reportContent(input: {
+  kind: "read" | "comment";
+  id: string;
+  reason: string;
+}) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const reason = input.reason.trim().slice(0, 500);
+  if (!reason) return { error: "Tell us what is wrong." };
+  if (!/^[0-9a-f-]{36}$/i.test(input.id))
+    return { error: "That item could not be reported." };
+
+  const row =
+    input.kind === "comment"
+      ? { reporter_id: user.id, comment_id: input.id, reason }
+      : { reporter_id: user.id, post_id: input.id, reason };
+
+  const { error } = await supabase.from("reports").insert(row);
+
+  // A duplicate (already reported) is a success from the reader's point of view.
+  if (error && !/duplicate|unique/i.test(error.message)) {
+    return { error: "That report could not be filed. Try again." };
+  }
+  return { error: null };
+}
+
+/**
  * Permanently delete the current user's account and all their data (via DB
  * cascade), then sign out. Backed by the delete_current_user() SQL function.
  */

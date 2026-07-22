@@ -113,7 +113,19 @@ export default async function RootLayout({
 
         <footer className="mx-auto max-w-shell px-4 py-10 text-center text-xs text-cream-soft sm:px-6">
           <hr className="rule mb-4" />
-          Marginaly · read deliberately
+          <p>Marginaly · read deliberately</p>
+          <p className="mt-2">
+            <Link href="/privacy" className="text-cream-soft hover:text-brass">
+              Privacy
+            </Link>
+            <span className="mx-2 text-ink-faint">·</span>
+            <a
+              href="mailto:hello@marginaly.club"
+              className="text-cream-soft hover:text-brass"
+            >
+              Contact
+            </a>
+          </p>
         </footer>
       </body>
     </html>
