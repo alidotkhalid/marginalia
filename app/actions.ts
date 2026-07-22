@@ -1276,12 +1276,14 @@ export async function reportContent(input: {
   if (!/^[0-9a-f-]{36}$/i.test(input.id))
     return { error: "That item could not be reported." };
 
-  const row =
-    input.kind === "comment"
-      ? { reporter_id: user.id, comment_id: input.id, reason }
-      : { reporter_id: user.id, post_id: input.id, reason };
-
-  const { error } = await supabase.from("reports").insert(row);
+  // One row shape, with exactly one of the two ids set (the DB check enforces
+  // this too). A single shape keeps Supabase's insert types happy.
+  const { error } = await supabase.from("reports").insert({
+    reporter_id: user.id,
+    post_id: input.kind === "read" ? input.id : null,
+    comment_id: input.kind === "comment" ? input.id : null,
+    reason,
+  });
 
   // A duplicate (already reported) is a success from the reader's point of view.
   if (error && !/duplicate|unique/i.test(error.message)) {
